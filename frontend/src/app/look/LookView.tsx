@@ -99,6 +99,14 @@ export function LookView() {
   const [resolving, setResolving] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
+  const stageRef = useRef<HTMLElement | null>(null);
+  // On a phone the viewer starts below the target list: bring it into view once a target is picked.
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!target || !el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top > window.innerHeight * 0.6) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [target]);
 
   const grid: Grid | null = useMemo(() => {
     if (!target) return null;
@@ -384,7 +392,7 @@ export function LookView() {
       </div>
 
       {target && (
-        <section className={styles.stage} aria-labelledby="look-title">
+        <section ref={stageRef} className={styles.stage} aria-labelledby="look-title">
           <div className={styles.viewer}>
             <canvas ref={canvas} width={456} height={456} className={styles.canvas} aria-label={`SPHEREx images of ${target.label}, aligned north up`} role="img" />
             {status.kind === "busy" && (
@@ -486,9 +494,9 @@ export function LookView() {
               <p className={styles.note}>
                 {frames.length} of {images?.filter((i) => i.detector === detector).length ?? 0} images from this band, spread over every
                 visit{failed ? `; ${failed} couldn't be downloaded` : ""}. Each is resampled onto the same north-up grid so stars line up.
-                {motionArcsec >= 1 && ` The ring marks where the star should be on each date; it moves ${motionArcsec.toFixed(0)}″ over these images.`}{" "}
-                {saturated && " The star's core saturates SPHEREx's detector, which records no value there; it is drawn white."}{" "}
-                The wavelength changes slightly from image to image (SPHEREx sees a different color across each detector), so steady
+                {motionArcsec >= 1 && ` The ring marks where the star should be on each date; it moves ${motionArcsec.toFixed(0)}″ over these images.`}
+                {saturated && " The star's core saturates SPHEREx's detector, which records no value there; it is drawn white."} The
+                wavelength changes slightly from image to image (SPHEREx sees a different color across each detector), so steady
                 stars can flicker a little.
               </p>
             )}
