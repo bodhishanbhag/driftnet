@@ -145,4 +145,19 @@ describe("differential photometry and stacking", () => {
     expect(snr).not.toBeNull();
     expect(snr!).toBeGreaterThan(5);
   });
+
+  it("pure noise is not called a detection", () => {
+    const n = 41;
+    let seed = 99;
+    const frames = Array.from({ length: 12 }, (_, k) => {
+      const z = new Float32Array(n * n);
+      for (let i = 0; i < z.length; i++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        z[i] = ((seed / 0x7fffffff) - 0.5) * 3.46;
+      }
+      return { z, at: [15 + k * 0.5, 20] as [number, number] };
+    });
+    const { snr } = shiftAndStack(frames, n, [20, 20]);
+    expect(Math.abs(snr!)).toBeLessThan(3);
+  });
 });

@@ -139,6 +139,10 @@ export default function LandingPage() {
                 hasn&apos;t been matched to a known object yet. Every object on this site was found this
                 way, by comparing SPHEREx images of the same patch of sky taken at different times.
               </p>
+              <p>
+                <Link href="/look/">Look anywhere</Link>: name any star, or pick one of the challenge&apos;s five example targets, and
+                watch every SPHEREx image of it, live from NASA&apos;s archive.
+              </p>
             </div>
             <div className={styles.seeItPlate}>
               <HeroBlink {...blink} lazy />

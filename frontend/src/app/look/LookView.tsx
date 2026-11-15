@@ -231,7 +231,8 @@ export function LookView() {
     const off = document.createElement("canvas");
     off.width = N;
     off.height = N;
-    const stackTop = stack ? Math.max(8, quantile(stack.z, 0.995)) : top;
+    // A gentler stretch for the stack, so faint sources show.
+    const stackTop = stack ? Math.min(20, Math.max(8, quantile(stack.z, 0.99))) : top;
     const px =
       mode === "stack" && stack
         ? toGray(fillSaturated(stack.z, N, stackTop * 0.3, stackTop).data, stackTop)
@@ -405,7 +406,7 @@ export function LookView() {
                 <strong>Shift-and-stack of {frames.length} images.</strong> Each image is shifted so the target&apos;s predicted position
                 lines up, then all are averaged: anything that moves as predicted adds up while noise averages down, about{" "}
                 {Math.sqrt(frames.length).toFixed(1)}× deeper than one image. This is how searches for faint, slow objects like Planet X
-                work. Signal at the ring:{" "}
+                work. Signal at the ring, compared with the same circle placed on hundreds of other spots in this stack:{" "}
                 <strong className="mono">{stack.snr === null ? "not measurable (saturated or off the edge)" : `S/N ${stack.snr.toFixed(1)}`}</strong>
                 {stack.snr !== null && (stack.snr >= 5 ? ", a clear detection." : stack.snr >= 3 ? ", a hint, not a detection." : ", not detected.")}
               </p>

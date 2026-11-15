@@ -306,19 +306,40 @@ export function shiftAndStack(frames: { z: Float32Array; at: [number, number] }[
   const mean = new Float32Array(n * n);
   for (let i = 0; i < mean.length; i++) mean[i] = cnt[i]! ? sum[i]! / cnt[i]! : Number.NaN;
   const z = normalize(mean);
-  // S/N: aperture sum over the noise expected for that many independent pixels.
-  const r = 2.2;
-  let s = 0;
-  let k = 0;
-  for (let y = Math.floor(to[1] - r); y <= Math.ceil(to[1] + r); y++) {
-    for (let x = Math.floor(to[0] - r); x <= Math.ceil(to[0] + r); x++) {
-      if (x < 0 || y < 0 || x >= n || y >= n || Math.hypot(x - to[0], y - to[1]) > r) continue;
-      const v = z[y * n + x]!;
-      if (!Number.isFinite(v)) return { z, snr: null };
-      s += v;
-      k++;
+  return { z, snr: empiricalSnr(z, n, to) };
+}
+
+/**
+ * Signal-to-noise at `to`, calibrated on the image itself: the aperture sum there compared with
+ * the same aperture placed on a grid of spots across the image (median and robust spread).
+ * Correlated noise from resampling and stacking is then accounted for automatically.
+ */
+export function empiricalSnr(z: Float32Array, n: number, to: [number, number], r = 2.2): number | null {
+  const sumAt = (cx: number, cy: number): number | null => {
+    let s = 0;
+    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+        if (Math.hypot(x - cx, y - cy) > r) continue;
+        if (x < 0 || y < 0 || x >= n || y >= n) return null;
+        const v = z[y * n + x]!;
+        if (!Number.isFinite(v)) return null;
+        s += v;
+      }
+    }
+    return s;
+  };
+  const here = sumAt(to[0], to[1]);
+  if (here === null) return null;
+  const sums: number[] = [];
+  for (let y = 4; y < n - 4; y += 3) {
+    for (let x = 4; x < n - 4; x += 3) {
+      if (Math.hypot(x - to[0], y - to[1]) < 6) continue;
+      const v = sumAt(x, y);
+      if (v !== null) sums.push(v);
     }
   }
-  // Neighbouring pixels of a resampled image are correlated; ~2 pixels per independent sample.
-  return { z, snr: k ? s / Math.sqrt(k * 2) : null };
+  if (sums.length < 30) return null;
+  const mid = median(sums);
+  const spread = 1.4826 * median(sums.map((v) => Math.abs(v - mid)));
+  return spread > 0 ? (here - mid) / spread : null;
 }
