@@ -15,6 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     page("/", 1),
     page("/objects/", 0.9),
+    page("/look/", 0.9),
     page("/sky/", 0.9),
     page("/limits/", 0.8),
     page("/about/", 0.8),

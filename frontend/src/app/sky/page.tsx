@@ -1,7 +1,8 @@
 import { PageGuide } from "@/components/PageGuide";
 import type { Metadata } from "next";
 import { pageMeta } from "@/lib/meta";
-import { staticFields, staticSurvey } from "@/lib/staticData";
+import { countDistinctTracks } from "@/lib/sameTrack";
+import { staticFields, staticObjects, staticSurvey } from "@/lib/staticData";
 import { packTile } from "@/components/skyTile";
 import { SkyView } from "./SkyView";
 import { SurveySpeedPanel } from "@/components/survey/SurveySpeed";
@@ -18,6 +19,7 @@ export default function SkyPage() {
   const { runs: _runs, ...survey0 } = (staticSurvey() ?? {}) as NonNullable<ReturnType<typeof staticSurvey>> & { runs?: unknown };
   void _runs;
   const survey = "tiles" in survey0 ? survey0 : null;
+  const objects = staticObjects()?.objects ?? null;
   return (
     <div className="container">
       <header className="page-header">
@@ -43,6 +45,7 @@ export default function SkyPage() {
             : null
         }
         fieldNames={Object.fromEntries(fields.map((f) => [f.field_id, f.name]))}
+        distinctObjects={objects ? countDistinctTracks(objects) : null}
       />
       <div style={{ marginTop: "var(--space-8)" }}>
         <SurveySpeedPanel />

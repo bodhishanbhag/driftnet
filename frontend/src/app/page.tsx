@@ -3,13 +3,15 @@ import { FieldGrid } from "@/components/FieldGrid";
 import { SpacetimeFabric } from "@/components/home/SpacetimeFabric";
 import { HomeSky } from "@/components/home/HomeSky";
 import { HeroBlink } from "@/components/home/HeroBlink";
+import { LiveObjectTotal, LiveUnidentified } from "@/components/home/LiveCounts";
 import { heroBlink } from "@/lib/heroBlink";
 import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
 import { Disclosure, DisclosureGroup } from "@/components/Disclosure";
 import { TourButton } from "@/components/tour/Tour";
 import { SpectralStrip } from "@/components/SpectralStrip";
 import { formatUtcDate } from "@/lib/format";
-import { staticCandidates, staticGrowth, staticSurvey } from "@/lib/staticData";
+import { countDistinctTracks } from "@/lib/sameTrack";
+import { staticGrowth, staticObjects, staticSurvey } from "@/lib/staticData";
 import styles from "./page.module.css";
 
 /** The whole sky: 4π steradians, in square degrees. */
@@ -52,16 +54,19 @@ export default function LandingPage() {
   const blink = heroBlink();
   // Real numbers from the data the site was built with.
   const survey = staticSurvey();
-  const candidates = staticCandidates();
   const t = survey?.totals;
   // Objects JPL couldn't identify, as last recorded from the live site by the pipeline.
   const unidentified = staticGrowth().findLast((d) => d.unidentified != null)?.unidentified ?? null;
-  const stats = [
+  // One object per body: the same sightings published by two overlapping patches count once. The
+  // live count (which also folds an asteroid seen in different weeks into one) replaces it on load.
+  const objects = staticObjects()?.objects ?? null;
+  type Stat = { value: React.ReactNode; label: string };
+  const stats = ([
     t && { value: fmtInt(t.n_epochs), label: "SPHEREx images analyzed" },
     t && { value: fmtInt(t.n_searched ?? t.n_processed), label: "patches of sky searched" },
     t && { value: `${(t.area_deg2_searched ?? t.area_deg2_processed).toFixed(1)} deg²`, label: `of sky covered (${skyShare(t.area_deg2_searched ?? t.area_deg2_processed)})` },
-    candidates && { value: fmtInt(candidates.candidates.filter((c) => c.classification !== "injected").length), label: "moving objects tracked" },
-  ].filter((s): s is { value: string; label: string } => !!s);
+    objects && { value: <LiveObjectTotal fallback={countDistinctTracks(objects)} />, label: "moving objects tracked" },
+  ] as (Stat | null | undefined)[]).filter((s): s is Stat => !!s);
 
   return (
     <>
@@ -84,7 +89,7 @@ export default function LandingPage() {
               Browse the objects
             </Link>
             <Link href="/objects/?view=leads" className="button">
-              {unidentified != null ? `${unidentified} not yet identified` : "Unexplained leads"}
+              <LiveUnidentified fallback={unidentified} />
             </Link>
             <TourButton />
             <Link href="#how" className={styles.textLink}>
@@ -182,6 +187,12 @@ export default function LandingPage() {
               <h3>Not matched to anything known</h3>
               <p>Ranked by evidence, with where to point a telescope.</p>
               <span className={styles.modeCta}>See the leads</span>
+            </Link>
+            <Link href="/look/" className={`card ${styles.mode}`}>
+              <span className="eyebrow">Look anywhere</span>
+              <h3>Pick any star</h3>
+              <p>Name a star or a spot on the sky and watch every SPHEREx image of it, live from NASA&apos;s archive.</p>
+              <span className={styles.modeCta}>Try Barnard&apos;s Star</span>
             </Link>
             <Link href="/objects/?view=patches" className={`card ${styles.mode}`}>
               <span className="eyebrow">Patches of sky</span>

@@ -12,7 +12,8 @@ Old links (`/explore/`, `/detective/…`, `/leads/`) redirect to their new homes
 
 | Page | What you can do |
 |---|---|
-| [Objects](https://driftnet-sky.vercel.app/objects/) | Every moving object in one list: search, filters and AI search; tabs for **Unexplained leads** (ranked, with follow-up files), **Known (JPL)** and **Patches of sky** to blink. Each object has one report page with its images, orbit in 3D, spectrum and JPL check; each patch shows its movers' tracks in 3D (sky × time). |
+| [Objects](https://driftnet-sky.vercel.app/objects/) | Every moving object in one list: search, filters and AI search; tabs for **Unexplained leads** (ranked, with follow-up files), **Known objects** and **Patches of sky** to blink. Each object has one report page with its images, orbit in 3D, spectrum and JPL check; each patch shows its movers' tracks in 3D (sky × time). |
+| [Look anywhere](https://driftnet-sky.vercel.app/look/) | Name any star or give coordinates and blink every SPHEREx image of that spot, fetched live from NASA/IPAC IRSA, with a brightness check against comparison stars and a shift-and-stack view. The challenge's five example targets (Barnard's Star, WISE 0855−0714, Epsilon Indi B, RW Aurigae, R Draconis) are one click each. |
 | [Compare](https://driftnet-sky.vercel.app/objects/compare/) | Any two objects side by side, with both orbits in one 3D view. The pair is in the address, so a comparison is a link you can share. |
 | [Sky map](https://driftnet-sky.vercel.app/sky/) | Where we have searched, as a flat all-sky map or a 3D globe, with the Planet Nine search region; and every tracked object placed in the solar system in 3D |
 | [Limits](https://driftnet-sky.vercel.app/limits/) | How faint and how slow an object the pipeline can find, measured with simulated objects |

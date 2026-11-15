@@ -72,6 +72,56 @@ export async function enrichedObjects(env: Env, deps: Deps): Promise<{ list: Obj
 /** JPL designations compared without case or spacing differences ("2024 AB1" = "2024  ab1"). */
 export const designationKey = (d: string) => d.trim().replace(/\s+/g, " ").toLowerCase();
 
+/** What two published tracks share when they are the same detections: start, end, count and speed. */
+const sameTrackKey = (o: ObjectSummary) => `${o.first_time_utc}|${o.last_time_utc}|${o.n_detections}|${o.rate_arcsec_per_hr}`;
+
+const mergeable = (o: ObjectSummary) => o.classification !== "injected" && o.candidate_ids.length > 0;
+
+/**
+ * Neighbouring survey tiles overlap, so a track near a shared edge is published once per tile:
+ * the same detections, at the same times, with the same fitted speed. Those are one object, with
+ * or without a catalog name, so they are folded into one entry before anything is counted. The
+ * entry a catalog has identified stays (otherwise the first by id); the others are listed in
+ * `also_seen_as`. Detections and visits are not added up: they are the same sightings.
+ */
+export function mergeSameTrack(items: ObjectSummary[]): ObjectSummary[] {
+  const groups = new Map<string, ObjectSummary[]>();
+  for (const o of items) {
+    if (!mergeable(o)) continue;
+    const k = sameTrackKey(o);
+    groups.set(k, [...(groups.get(k) ?? []), o]);
+  }
+  const merged = new Map<string, ObjectSummary>();
+  const dropped = new Set<string>();
+  const uniq = (xs: string[]) => [...new Set(xs)];
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    const sorted = [...g].sort(
+      (a, b) =>
+        Number(b.known_object_matched) - Number(a.known_object_matched) ||
+        Number(b.known_object_checked) - Number(a.known_object_checked) ||
+        a.object_id.localeCompare(b.object_id),
+    );
+    const head = sorted[0]!;
+    const rest = sorted.slice(1);
+    merged.set(head.object_id, {
+      ...head,
+      field_ids: uniq(sorted.flatMap((o) => o.field_ids)),
+      candidate_ids: uniq(sorted.flatMap((o) => o.candidate_ids)),
+      also_seen_as: uniq([...(head.also_seen_as ?? []), ...rest.map((o) => o.object_id)]),
+    });
+    for (const o of rest) dropped.add(o.object_id);
+  }
+  return items.filter((o) => !dropped.has(o.object_id)).map((o) => merged.get(o.object_id) ?? o);
+}
+
+/** The other published entries that are the same detections as `o` (see mergeSameTrack). */
+export function sameTrackIds(o: ObjectSummary, items: ObjectSummary[]): string[] {
+  if (!mergeable(o)) return [];
+  const k = sameTrackKey(o);
+  return items.filter((x) => x.object_id !== o.object_id && mergeable(x) && sameTrackKey(x) === k).map((x) => x.object_id);
+}
+
 /**
  * The same asteroid seen in several tiles (neighbouring tiles, or the same sky in other weeks)
  * becomes one object per JPL designation. The entry with the most detections stays (ties: the
@@ -110,7 +160,7 @@ export function mergeByDesignation(items: ObjectSummary[]): ObjectSummary[] {
       last_time_utc: last,
       arc_hours: arc,
       summary_plain: `${head.summary_plain} Also seen in ${rest.length} other ${rest.length === 1 ? "tile" : "tiles"}: ${n} detections in all.`,
-      also_seen_as: rest.map((o) => o.object_id),
+      also_seen_as: uniq([...rest.map((o) => o.object_id), ...sorted.flatMap((o) => o.also_seen_as ?? [])]),
     });
     for (const o of rest) dropped.add(o.object_id);
   }
@@ -123,7 +173,7 @@ objects.get("/", async (c) => {
   const { list, objects: all } = await enrichedObjects(c.env, c.get("deps"));
   const sort = c.req.query("sort") ?? "score";
   if (sort !== "score" && sort !== "anomaly") throw badRequest("sort must be 'score' or 'anomaly'");
-  const rows = dedupe ? mergeByDesignation(all) : all;
+  const rows = dedupe ? mergeByDesignation(mergeSameTrack(all)) : all;
   if (sort === "anomaly") {
     // Most unusual first; objects without a ranking keep the review order after them.
     rows.sort((a, b) => (a.anomaly_rank ?? Infinity) - (b.anomaly_rank ?? Infinity) || reviewPriority(a) - reviewPriority(b));
@@ -203,6 +253,13 @@ export async function loadObject(
     next.also_seen_as = all
       .filter((o) => o.object_id !== id && o.known_object_matched && o.known_object_designation && designationKey(o.known_object_designation) === key)
       .map((o) => o.object_id);
+  }
+  if (obj.classification !== "injected") {
+    // The same detections published by an overlapping tile: link them, whether or not a catalog names them.
+    const list = await readStaticJson<ObjectList>(env, "objects.json");
+    const self = list?.objects.find((o) => o.object_id === id);
+    const twins = self && list ? sameTrackIds(self, list.objects) : [];
+    if (twins.length) next.also_seen_as = [...new Set([...(next.also_seen_as ?? []), ...twins])];
   }
   return { detail: next, cacheControl: cacheable ? "public, max-age=300" : "no-store", pending };
 }
