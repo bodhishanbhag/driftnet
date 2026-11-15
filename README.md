@@ -138,6 +138,7 @@ Each object page shows:
 - a distance class, named only when most clones agree;
 - the 3D uncertainty cloud;
 - a 60-day prediction whose note says plainly how far it can be trusted.
+- more information such as infrared colors, predicted chemical composition, and more.
 
 The method is tested on simulated asteroids observed at real SPHEREx times and positions (`spherex-px orbit-validation`, served at `/api/validation/orbits`). For orbits JPL already knows, the Worker compares ours with JPL Horizons (`/api/validation/jpl-orbits`).
 
