@@ -23,6 +23,7 @@ export const SECTIONS: Section[] = [
     match: "/objects",
     also: ["/explore"],
   },
+  { href: "/look/", label: "Look anywhere", blurb: "Any star or spot on the sky: every SPHEREx image of it, live", match: "/look" },
   { href: "/sky/", label: "Sky map", blurb: "Every patch of sky we've searched, and what's left", match: "/sky" },
   { href: "/limits/", label: "Limits", blurb: "Where Planet X could still be hiding: how faint and slow we can see", match: "/limits" },
   { href: "/about/", label: "About", blurb: "How it works, data credits and the team", match: "/about" },

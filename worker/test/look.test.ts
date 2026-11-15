@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedSource, imageRows, parseSesame } from "../src/routes/look";
+import { allowedSource, imageRows, parseSesame, trimToImage } from "../src/routes/look";
 import { json, makeClient } from "./helpers";
 
 const FILE = "https://irsa.ipac.caltech.edu/ibe/data/spherex/qr2/level2/2025W23_1C/l2b-v20-2025-251/1/level2_2025W23_1C_0164_1D1_spx_l2b-v20-2025-251.fits";
@@ -57,6 +57,21 @@ describe("look", () => {
     await settle();
     await get(path);
     expect(calls).toHaveLength(1);
+  });
+
+  it("trims a cutout to its primary header and IMAGE extension", () => {
+    const card = (k: string, v: string) => `${k.padEnd(8)}= ${v.padStart(20)}`.padEnd(80);
+    const hdu = (cards: string[], dataBytes: number) => {
+      const head = [...cards, "END".padEnd(80)].join("").padEnd(2880, " ");
+      return head + "\0".repeat(Math.ceil(dataBytes / 2880) * 2880);
+    };
+    const file =
+      hdu([card("SIMPLE", "T"), card("BITPIX", "8"), card("NAXIS", "0")], 0) +
+      hdu([card("XTENSION", "'IMAGE   '"), card("BITPIX", "-32"), card("NAXIS", "2"), card("NAXIS1", "59"), card("NAXIS2", "59"), card("EXTNAME", "'IMAGE   '")], 59 * 59 * 4) +
+      hdu([card("XTENSION", "'BINTABLE'"), card("BITPIX", "8"), card("NAXIS", "2"), card("NAXIS1", "1000"), card("NAXIS2", "1000"), card("EXTNAME", "'EPSF    '")], 1e6);
+    const buf = new TextEncoder().encode(file).buffer as ArrayBuffer;
+    const out = trimToImage(buf)!;
+    expect(out.byteLength).toBe(2880 + 2880 + Math.ceil((59 * 59 * 4) / 2880) * 2880);
   });
 
   it("rejects an error page in place of a FITS file", async () => {

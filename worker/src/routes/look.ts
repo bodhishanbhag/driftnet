@@ -134,6 +134,40 @@ look.get("/images", async (c) => {
   });
 });
 
+/**
+ * Keep only the primary header and the IMAGE extension of a cutout. IRSA's cutouts also carry the
+ * full-size PSF tables (about 4 MB), which the viewer doesn't need: trimmed, a cutout is ~30 kB.
+ */
+export function trimToImage(buf: ArrayBuffer): ArrayBuffer | null {
+  const BLOCK = 2880;
+  const dec = new TextDecoder("ascii");
+  let pos = 0;
+  while (pos + BLOCK <= buf.byteLength) {
+    const cards: Record<string, string> = {};
+    let ended = false;
+    while (!ended && pos + BLOCK <= buf.byteLength) {
+      const blk = dec.decode(buf.slice(pos, pos + BLOCK));
+      pos += BLOCK;
+      for (let i = 0; i < BLOCK; i += 80) {
+        const key = blk.slice(i, i + 8).trim();
+        if (key === "END") {
+          ended = true;
+          break;
+        }
+        if (blk[i + 8] === "=") cards[key] = blk.slice(i + 10, i + 80).split("/")[0]!.trim().replace(/^'|'\s*$/g, "").trim();
+      }
+    }
+    if (!ended) return null;
+    const naxis = Number(cards.NAXIS ?? 0);
+    let n = naxis > 0 ? 1 : 0;
+    for (let i = 1; i <= naxis; i++) n *= Number(cards[`NAXIS${i}`] ?? 0);
+    const bytes = (Math.abs(Number(cards.BITPIX ?? 8)) / 8) * Number(cards.GCOUNT ?? 1) * (Number(cards.PCOUNT ?? 0) + n);
+    pos += Math.ceil(bytes / BLOCK) * BLOCK;
+    if (cards.EXTNAME === "IMAGE") return pos <= buf.byteLength ? buf.slice(0, pos) : null;
+  }
+  return null;
+}
+
 /** Only SPHEREx Level 2 files on IRSA may be proxied. */
 export function allowedSource(src: string): boolean {
   try {
@@ -173,9 +207,10 @@ look.get("/cutout", async (c) => {
       throw new UpstreamError("IRSA cutout", timeout ? "timeout" : "unreachable");
     }
     if (!res.ok) throw new UpstreamError("IRSA cutout", res.status);
-    bytes = await res.arrayBuffer();
+    const full = await res.arrayBuffer();
     // A FITS file starts with the SIMPLE card; anything else is an error page.
-    if (new TextDecoder().decode(bytes.slice(0, 6)) !== "SIMPLE") throw new UpstreamError("IRSA cutout", "invalid_response");
+    if (new TextDecoder().decode(full.slice(0, 6)) !== "SIMPLE") throw new UpstreamError("IRSA cutout", "invalid_response");
+    bytes = trimToImage(full) ?? full;
     if (deps.cache) {
       const stored = new Response(bytes.slice(0), { headers: { "Content-Type": "application/fits", "Cache-Control": "public, max-age=604800" } });
       deps.waitUntil(deps.cache.put(key, stored).catch(() => undefined));
