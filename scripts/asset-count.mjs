@@ -9,11 +9,24 @@ export const MAX_WORKER_ASSETS = 20_000;
 
 /**
  * Left out of deployed Worker builds only (local `wrangler dev`, the screenshot tests and
- * Lighthouse keep them). Every survey run adds about 2,000 sky images; the API returns their
- * /data/... URLs and the live site (Vercel) serves frontend/public itself, so the Worker never
- * reads them. On the workers.dev host these images 404; use the Vercel site for pages.
+ * Lighthouse keep them). Every survey run adds about 2,000 sky images and hundreds of pages. The
+ * API returns the images' /data/... URLs and the live site (Vercel) serves frontend/public and the
+ * pages itself, so the Worker never reads them. On the workers.dev host these images 404; use the
+ * Vercel site for pages.
  */
-export const DEPLOY_ONLY_IGNORES = ["data/**/*.webp", "data/**/*.png"];
+export const DEPLOY_ONLY_IGNORES = [
+  "data/**/*.webp",
+  "data/**/*.png",
+  // One prerendered page folder per object, candidate and patch (about 15,000 files and growing
+  // with every survey run). The Worker only serves /api from data/*.json; the live site (Vercel)
+  // serves these pages. The shared pages (/objects/object/, /detective/candidate/,
+  // /explore/field/, which take ?id=) stay, so every report still opens on workers.dev.
+  "objects/obj-*/",
+  "detective/*/",
+  "!detective/candidate/",
+  "explore/*/",
+  "!explore/field/",
+];
 
 function* walk(dir) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
