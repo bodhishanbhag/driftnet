@@ -6,6 +6,7 @@ import { askRoute, candidateWriteups, guideRoute, objectWriteups, searchRoute, t
 import { candidates } from "./routes/candidates";
 import { composition } from "./routes/composition";
 import { coverage } from "./routes/coverage";
+import { look } from "./routes/look";
 import { fields } from "./routes/fields";
 import { health } from "./routes/health";
 import { objects, survey } from "./routes/objects";
@@ -45,6 +46,7 @@ export function createApp(makeDeps: (env?: Env, ctx?: Pick<ExecutionContext, "wa
   app.route("/api/candidates", candidates);
   app.route("/api/injection", injection);
   app.route("/api/coverage", coverage);
+  app.route("/api/look", look);
   app.route("/api/runs", runs);
   app.route("/api", composition);
   app.route("/api/objects", objects);

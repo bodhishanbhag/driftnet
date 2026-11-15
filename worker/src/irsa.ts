@@ -64,7 +64,7 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
-const FILE_RE = /level2_(\d{4}W\d{2}_\d[A-Z]_\d{4}_\d+)D([1-6])_spx/;
+export const FILE_RE = /level2_(\d{4}W\d{2}_\d[A-Z]_\d{4}_\d+)D([1-6])_spx/;
 
 export function mjdToIso(mjd: number): string {
   return new Date((mjd - 40587) * 86400000).toISOString();
