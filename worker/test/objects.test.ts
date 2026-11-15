@@ -178,7 +178,8 @@ describe("JPL results stay consistent across endpoints", () => {
 
 describe("most unusual first", () => {
   it("sorts by anomaly rank and rejects unknown sorts", async () => {
-    const row = (id: string, rank: number | null) => ({ ...objList.objects[0]!, object_id: id, anomaly_rank: rank, known_object_matched: false });
+    // Three different tracks (distinct speeds): identical ones would be folded into one object.
+    const row = (id: string, rank: number | null) => ({ ...objList.objects[0]!, object_id: id, anomaly_rank: rank, known_object_matched: false, rate_arcsec_per_hr: 20 + (rank ?? 0) });
     const files = { "/data/objects.json": { ...objList, objects: [row("obj-a", 3), row("obj-b", null), row("obj-c", 1)] } };
     const { get } = makeClient({ files });
     const r = (await json(await get("/api/objects?sort=anomaly"))) as ObjectList;

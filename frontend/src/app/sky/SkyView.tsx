@@ -6,6 +6,7 @@ import { EmptyState, ErrorState } from "@/components/DataState";
 import { StudySkeleton } from "@/components/Skeletons";
 import { Deferred } from "@/components/Deferred";
 import { Disclosure } from "@/components/Disclosure";
+import { LiveObjectTotal } from "@/components/home/LiveCounts";
 import { WhenVisible } from "@/components/WhenVisible";
 import { unpackTile, type PackedTile } from "@/components/skyTile";
 import { DEPTH_RANGE, OBJECT_STEPS, SkyMap, type RaUnits, type SkyColorBy, type SkyTile, depthColor, hasSourcedRegion } from "@/components/SkyMap";
@@ -49,9 +50,12 @@ export type PackedSkySurvey = Omit<Survey, "tiles"> & { tiles: PackedTile[] };
 export function SkyView({
   initial: packed,
   fieldNames,
+  distinctObjects,
 }: {
   initial: PackedSkySurvey | null;
   fieldNames: Record<string, string>;
+  /** Moving objects in the built data, counting the same sightings from overlapping patches once. */
+  distinctObjects?: number | null;
 }) {
   const initial = useMemo<SkySurvey | null>(() => (packed ? { ...packed, tiles: packed.tiles.map(unpackTile) } : null), [packed]);
   const [showAll, setShowAll] = useState(false);
@@ -164,7 +168,10 @@ export function SkyView({
         </div>
         <div>
           <dt>Moving objects</dt>
-          <dd className="mono">{t.n_objects}</dd>
+          <dd className="mono">
+            {/* The same number as the Objects page: one per body, however many patches caught it. */}
+            <LiveObjectTotal fallback={distinctObjects ?? t.n_objects} />
+          </dd>
         </div>
       </dl>
 
@@ -424,7 +431,7 @@ export function SkyView({
           {survey.last_run && (
             <>
               {" "}
-              Last run finished {formatUtcDateTime(survey.last_run.finished_utc)}: {survey.last_run.n_tiles_processed} tiles,{" "}
+              Last run finished {formatUtcDateTime(survey.last_run.finished_utc)}: {survey.last_run.n_tiles_processed.toLocaleString("en-US")} tiles,{" "}
               {survey.last_run.n_new_objects} new objects.
             </>
           )}

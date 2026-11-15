@@ -68,6 +68,15 @@ export function LeadsView() {
   }
   const counts = { strong: 0, moderate: 0, weak: 0 };
   for (const l of leads) counts[l.confidence.level]++;
+  // The same split the All tab shows, so the two tabs can be checked against each other.
+  const pairs = leads.filter((l) => l.classification === "unconfirmed_pair").length;
+  const artifacts = leads.filter((l) => l.classification === "likely_artifact").length;
+  const unexplained = leads.length - pairs - artifacts;
+  const kinds = [
+    unexplained > 0 && `${unexplained} unexplained`,
+    pairs > 0 && `${pairs} unconfirmed ${pairs === 1 ? "pair" : "pairs"}`,
+    artifacts > 0 && `${artifacts} likely ${artifacts === 1 ? "artifact" : "artifacts"}`,
+  ].filter(Boolean);
   return (
     <>
       {!live && (
@@ -78,9 +87,9 @@ export function LeadsView() {
       )}
       <div className={styles.summary}>
         <p>
-          <span className="mono">{leads.length}</span> unexplained {leads.length === 1 ? "object" : "objects"}:{" "}
-          <span className="mono">{counts.strong}</span> strong, <span className="mono">{counts.moderate}</span> moderate and{" "}
-          <span className="mono">{counts.weak}</span> weak leads.
+          <span className="mono">{leads.length}</span> {leads.length === 1 ? "object" : "objects"} no catalog has identified
+          {pairs + artifacts > 0 && kinds.length > 0 ? ` (${kinds.join(", ")})` : ""}: <span className="mono">{counts.strong}</span> strong,{" "}
+          <span className="mono">{counts.moderate}</span> moderate and <span className="mono">{counts.weak}</span> weak leads.
           {newSinceBuild > 0 && (
             <>
               {" "}

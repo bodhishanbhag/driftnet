@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CandidateList, KnownObject, ObjectDetail, ObjectList, ObjectSummary } from "../src/contract";
 import type { Deps } from "../src/env";
-import { designationKey, mergeByDesignation } from "../src/routes/objects";
+import { designationKey, mergeByDesignation, mergeSameTrack, sameTrackIds } from "../src/routes/objects";
 import { refreshStale } from "../src/scheduled";
 import { FAILED_RETRY_SECONDS, isStale, readRecord, readRecords, refreshRecord, writeRecord } from "../src/store";
 import { sqliteD1 } from "./d1";
@@ -183,6 +183,32 @@ describe("the same asteroid in several tiles", () => {
     expect([m.first_time_utc, m.last_time_utc, m.arc_hours]).toEqual(["2025-06-01T00:00:00Z", "2025-06-04T00:00:00Z", 72]);
     expect(m.summary_plain).toContain("Also seen in 1 other tile: 43 detections in all.");
     expect(designationKey(" 2524  Budovicium ")).toBe("2524 budovicium");
+  });
+
+  it("folds the same detections published by overlapping tiles into one object, named or not", () => {
+    // Two tiles published the same unnamed track; a third track only shares its dates.
+    const a = { ...s("obj-t1-c01", null, 27, "2025-11-29T05:56:06Z", "2025-11-30T12:55:04Z", "t1"), rate_arcsec_per_hr: 32.973 };
+    const b = { ...s("obj-t2-c01", null, 27, "2025-11-29T05:56:06Z", "2025-11-30T12:55:04Z", "t2"), rate_arcsec_per_hr: 32.973 };
+    const other = { ...s("obj-t3-c01", null, 27, "2025-11-29T05:56:06Z", "2025-11-30T12:55:04Z", "t3"), rate_arcsec_per_hr: 12.5 };
+    // A catalog named one copy of a second track but has not answered for the other.
+    const named = { ...s("obj-t5-c01", "433 Eros", 9, "2025-06-01T00:00:00Z", "2025-06-01T12:00:00Z", "t5"), rate_arcsec_per_hr: 40 };
+    const unnamed = { ...s("obj-t4-c01", null, 9, "2025-06-01T00:00:00Z", "2025-06-01T12:00:00Z", "t4"), rate_arcsec_per_hr: 40, known_object_checked: false };
+    const sim = { ...a, object_id: "obj-sim", classification: "injected" as const };
+    const out = mergeSameTrack([a, b, other, unnamed, named, sim]);
+    expect(out.map((o) => o.object_id)).toEqual(["obj-t1-c01", "obj-t3-c01", "obj-t5-c01", "obj-sim"]);
+    const m = out[0]!;
+    expect(m.also_seen_as).toEqual(["obj-t2-c01"]);
+    expect(m.n_detections).toBe(27); // the same sightings, not added up
+    expect(m.field_ids).toEqual(["t1", "t2"]);
+    expect(m.candidate_ids).toEqual(["t1-c01", "t2-c01"]);
+    expect(out[2]).toMatchObject({ classification: "known_object", also_seen_as: ["obj-t4-c01"] });
+    expect(sameTrackIds(b, [a, b, other, sim])).toEqual(["obj-t1-c01"]);
+    expect(sameTrackIds(sim, [a, b, sim])).toEqual([]);
+    // Merging by name afterwards keeps the earlier aliases.
+    const again = { ...s("obj-t6-c01", "433 Eros", 30, "2025-06-03T00:00:00Z", "2025-06-04T00:00:00Z", "t6") };
+    const both = mergeByDesignation(mergeSameTrack([unnamed, named, again]));
+    expect(both).toHaveLength(1);
+    expect(both[0]!.also_seen_as).toEqual(["obj-t5-c01", "obj-t4-c01"]);
   });
 
   it("serves merged objects, also_seen_as on the detail, and distinct counts in the survey", async () => {
