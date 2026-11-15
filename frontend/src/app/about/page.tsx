@@ -101,6 +101,18 @@ const SOURCES: { name: string; use: string; href: string; cite?: string }[] = [
     cite: "Brown & Batygin 2021, “The orbit of Planet Nine”, AJ, arXiv:2108.09868.",
   },
   {
+    name: "NASA/IPAC IRSA image search (SIA) and cutouts",
+    use: "Look anywhere: every SPHEREx Level 2 image of any sky position, fetched live and trimmed to a small cutout.",
+    href: "https://irsa.ipac.caltech.edu/docs/program_interface/sia.html",
+    cite: "NASA/IPAC Infrared Science Archive, SPHEREx Data Release 1.",
+  },
+  {
+    name: "CDS Sesame name resolver (SIMBAD, NED, VizieR)",
+    use: "Look anywhere: turns a star's name into its position and proper motion.",
+    href: "https://cds.unistra.fr/cgi-bin/Sesame",
+    cite: "This research has made use of the SIMBAD database and the Sesame service, operated at CDS, Strasbourg, France.",
+  },
+  {
     name: "JPL Small-Body Database (SBDB)",
     use: "Orbit pages for every identified object (we link to JPL rather than recompute its orbits), and published asteroid types (spec_B, spec_T) to check our composition answers.",
     href: "https://ssd.jpl.nasa.gov/tools/sbdb_lookup.html",
