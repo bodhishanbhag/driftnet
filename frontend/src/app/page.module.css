@@ -379,3 +379,28 @@
   -webkit-backdrop-filter: none;
   background: rgb(11 31 58 / 0.96);
 }
+
+/* "See it move": a real SPHEREx pair blinking, beside a short explanation. */
+.seeIt {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .seeIt {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+  }
+}
+
+.seeItText p:not(:global(.eyebrow)) {
+  max-width: 52ch;
+  color: var(--text-muted);
+}
+
+.seeItPlate {
+  padding: 6px;
+  width: 100%;
+  max-width: 520px;
+  justify-self: center;
+}

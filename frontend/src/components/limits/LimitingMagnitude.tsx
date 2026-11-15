@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { summarizeLimits, type LimitsStudy } from "@/lib/limits";
 import { staticInjectionStudy } from "@/lib/staticData";
+import { computeReach, type ReachStudy } from "@/lib/reach";
+import { ReachFigure } from "./ReachFigure";
 import styles from "./LimitingMagnitude.module.css";
 
 /**
@@ -80,6 +82,8 @@ export function LimitingMagnitudePanel() {
   const d = ourDepth();
   const p500 = planetRow(500);
   const p700 = planetRow(700);
+  const study = staticInjectionStudy() as unknown as ReachStudy | null;
+  const reach = study ? computeReach(study, 19.5) : null;
   return (
     <section id="limiting-magnitude" className={`card ${styles.panel}`} aria-labelledby="limiting-magnitude-heading">
       <p className="eyebrow">Limiting magnitude</p>
@@ -130,6 +134,18 @@ export function LimitingMagnitudePanel() {
           </tbody>
         </table>
       </div>
+
+      {reach && (
+        <>
+          <h3 className={styles.sub}>How far out can we see? (3D)</h3>
+          <p className={styles.intro}>
+            Two things limit a search: brightness and motion. Each green ring is how far out a body of that size stays brighter than the
+            limit. The gold sphere is how far out things still move fast enough for our 1–2 day linking to catch them. The predicted
+            Planet X zone (red) lies beyond both. Switch to the full survey to see how far deeper data pushes the rings.
+          </p>
+          <ReachFigure reach={reach} />
+        </>
+      )}
 
       <h3 className={styles.sub}>So how long would it take?</h3>
       <ul className={styles.points}>

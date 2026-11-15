@@ -178,6 +178,28 @@ export default function AboutPage() {
         change position. We search its public images for them, check each against independent catalogs of known objects, and publish the evidence.
       </p>
 
+      <section aria-labelledby="audience">
+        <h2 id="audience">Who this is for</h2>
+        <ul>
+          <li>
+            <strong>Anyone curious about the sky.</strong> Blink two real SPHEREx images and watch something move, the way Clyde Tombaugh
+            found Pluto. Every report has a plain-language write-up you can read in 10 languages or listen to.
+          </li>
+          <li>
+            <strong>Teachers and students.</strong> Each object shows the whole method from raw images to orbit, with the uncertainties
+            and what could make it wrong, so it works as a worked example of how astronomers test a claim.
+          </li>
+          <li>
+            <strong>Amateur and professional observers.</strong> Unexplained leads come with approximate predicted positions for the next two weeks
+            and downloads in the formats the Minor Planet Center uses (ADES and MPC 80-column), so anyone with a telescope can follow up.
+          </li>
+          <li>
+            <strong>Survey scientists.</strong> The detection limits are measured by planting thousands of fake objects into real images,
+            and the code, data and per-run ledger are open, so the results can be checked and reused.
+          </li>
+        </ul>
+      </section>
+
       <section aria-labelledby="pipeline">
         <h2 id="pipeline">The pipeline</h2>
         <div className={styles.flow}>

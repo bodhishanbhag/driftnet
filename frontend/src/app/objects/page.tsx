@@ -5,6 +5,7 @@ import { PrefetchData } from "@/components/PrefetchData";
 import { CardListSkeleton } from "@/components/Skeletons";
 import { pageMeta } from "@/lib/meta";
 import { ObjectsHub } from "./ObjectsHub";
+import { SystemPanel } from "@/components/three/SystemPanel";
 
 export const metadata: Metadata = pageMeta(
   "Objects",
@@ -27,6 +28,9 @@ export default function ObjectsPage() {
       <Suspense fallback={<CardListSkeleton label="Loading objects" />}>
         <ObjectsHub />
       </Suspense>
+      <div style={{ marginTop: "var(--space-8)" }}>
+        <SystemPanel context="objects" />
+      </div>
     </div>
   );
 }

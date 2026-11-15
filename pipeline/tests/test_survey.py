@@ -212,6 +212,50 @@ def test_survey_build_writes_report_when_shard_keeps_nothing(tmp_path, monkeypat
     out = tmp_path / "shard-out"
     plan_file = tmp_path / "plan.json"
     plan_file.write_text("[]")
-    rc = cli.main(["survey-build", "--plan", str(plan_file), "--shard", "2", "--of", "4", "--out", str(out)])
+    rc = cli.main(
+        ["survey-build", "--plan", str(plan_file), "--shard", "2", "--of", "4", "--out", str(out)]
+    )
     assert rc == 0
     assert json.loads((out / "survey-shard-2.json").read_text()) == []
+
+
+def test_build_share_parallel_reports_every_tile_once(tmp_path, monkeypatch):
+    """Blocks searched in parallel processes: every planned tile comes back exactly once, and a
+    block that cannot be searched (here: no index of exposures) is reported, not lost."""
+    import json
+    from dataclasses import asdict
+
+    from spherex_px.survey import PlannedTile, build_share, group_blocks
+
+    monkeypatch.setenv("SPX_DATA_DIR", str(tmp_path / "var"))
+    seg = "qr2/2025W23_1C"
+    # Tiles 2 block-widths apart, so each is its own block.
+    tiles = [
+        PlannedTile(f"sv-p-{i}", 10.0 + 3 * i, 0, 3.0 * i, 0, seg, 10, 3, 20, "Pisces")
+        for i in range(5)
+    ]
+    assert len(group_blocks(tiles)) == 5
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps([asdict(t) for t in tiles]))
+    seq = build_share(plan, 0, 1, tmp_path / "out1", workers=1)
+    par = build_share(plan, 0, 1, tmp_path / "out2", workers=3)
+    assert sorted(r.field_id for r in par) == sorted(t.field_id for t in tiles)
+    assert {r.field_id: r.status for r in par} == {r.field_id: r.status for r in seq}
+    assert not (tmp_path / "var" / "cache" / "workers").exists()
+
+
+def test_build_share_parallel_respects_deadline(tmp_path, monkeypatch):
+    import json
+    from dataclasses import asdict
+
+    from spherex_px.survey import PlannedTile, build_share
+
+    monkeypatch.setenv("SPX_DATA_DIR", str(tmp_path / "var"))
+    seg = "qr2/2025W23_1C"
+    tiles = [
+        PlannedTile(f"sv-d-{i}", 10.0 + 3 * i, 0, 3.0 * i, 0, seg, 10, 3, 20, "Pisces")
+        for i in range(4)
+    ]
+    plan = tmp_path / "plan.json"
+    plan.write_text(json.dumps([asdict(t) for t in tiles]))
+    assert build_share(plan, 0, 1, tmp_path / "out", workers=2, deadline_s=-1) == []

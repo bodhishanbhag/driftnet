@@ -113,7 +113,9 @@ def _survey_build(args: argparse.Namespace) -> int:
 
     out = Path(args.out) if args.out else DEFAULT_OUT
     deadline = args.deadline_min * 60 if args.deadline_min else None
-    results = build_share(Path(args.plan), args.shard, args.of, out, deadline_s=deadline)
+    results = build_share(
+        Path(args.plan), args.shard, args.of, out, deadline_s=deadline, workers=args.workers
+    )
     # A shard that keeps no tiles writes nothing else, so out may not exist yet.
     out.mkdir(parents=True, exist_ok=True)
     report = out / f"survey-shard-{args.shard}.json"
@@ -321,6 +323,12 @@ def main(argv: list[str] | None = None) -> int:
         "--deadline-min",
         type=float,
         help="start no new block after this many minutes (unreached tiles stay unsearched)",
+    )
+    sb.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="blocks to search at once, each in its own process (use the runner's cores)",
     )
     sb.set_defaults(func=_survey_build)
     tr = sub.add_parser(

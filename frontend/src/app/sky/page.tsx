@@ -4,6 +4,7 @@ import { pageMeta } from "@/lib/meta";
 import { staticFields, staticSurvey } from "@/lib/staticData";
 import { packTile } from "@/components/skyTile";
 import { SkyView } from "./SkyView";
+import { SurveySpeedPanel } from "@/components/survey/SurveySpeed";
 
 export const metadata: Metadata = pageMeta(
   "Sky map",
@@ -44,6 +45,9 @@ export default function SkyPage() {
         }
         fieldNames={Object.fromEntries(fields.map((f) => [f.field_id, f.name]))}
       />
+      <div style={{ marginTop: "var(--space-8)" }}>
+        <SurveySpeedPanel />
+      </div>
     </div>
   );
 }

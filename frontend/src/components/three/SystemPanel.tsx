@@ -12,14 +12,14 @@ const SystemFigure = lazy(() => import("./SystemFigure"));
  * "Where they are": every tracked object placed in the solar system from its fitted orbit.
  * The positions file and three.js load only when this section scrolls into view.
  */
-export function SystemPanel() {
+export function SystemPanel({ context = "sky" }: { context?: "sky" | "objects" }) {
   return (
     <section className="card" aria-labelledby="system-title" style={{ padding: "var(--space-4)" }}>
       <h2 id="system-title" style={{ marginTop: 0 }}>
-        The same objects, out in the solar system
+        {context === "sky" ? "The same objects, out in the solar system" : "Where these objects are, in 3D"}
       </h2>
       <p style={{ color: "var(--text-muted)", maxWidth: "70ch" }}>
-        The map above shows where each object appeared on the sky. This view shows where its fitted orbit puts it in space when SPHEREx
+        {context === "sky" ? "The map above shows where each object appeared on the sky. This view shows" : "Each dot is an object from the list, shown"} where its fitted orbit puts it in space when SPHEREx
         saw it, among the planets&apos; orbits. The direction to each object is measured; its distance is the uncertain part, because a
         day or two of sightings fits many orbits. Point at a dot to see the range.
       </p>
