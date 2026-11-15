@@ -20,9 +20,8 @@ export default function LimitsPage() {
         <PageGuide>How faint and how slow an object our search can find, so you know what we could still be missing.</PageGuide>
         <h1>Where could Planet X still be hiding?</h1>
         <p className="lede">
-          An object we didn&apos;t find isn&apos;t proof there&apos;s nothing there; it might just be too faint or too slow for us to
-          catch. So we measured our blind spots: we planted simulated moving objects in real SPHEREx images and ran the pipeline
-          without telling it where they were.
+          Not finding something doesn&apos;t mean it isn&apos;t there. It might be too faint or too slow for us. Here&apos;s what we can
+          and can&apos;t see.
         </p>
       </header>
       <LimitingMagnitudePanel />

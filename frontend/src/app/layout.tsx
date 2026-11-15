@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { CosmicBackdrop } from "@/components/backdrop/CosmicBackdrop";
 import { Footer } from "@/components/Footer";
+import { OpenDetailsOnHash } from "@/components/OpenDetailsOnHash";
 import { Guide } from "@/components/guide/Guide";
 import { TopBar } from "@/components/TopBar";
 import { Tour } from "@/components/tour/Tour";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
         <Footer />
+        <OpenDetailsOnHash />
         <Tour />
         <Guide />
       </body>

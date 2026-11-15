@@ -62,6 +62,7 @@ export function AskPanel({ subjectKind, subjectId, doc }: { subjectKind: AiSubje
 
   return (
     <Panel
+      defaultOpen
       id="ask"
       title="Ask about this object"
       kicker="AI"

@@ -1055,3 +1055,53 @@ a.cite:hover {
     grid-column: 1 / -1;
   }
 }
+
+/* Collapsible panel header */
+.panelHeadClosed {
+  margin-bottom: 0;
+}
+
+.panelToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch);
+  margin: calc(-1 * var(--space-2)) 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.panelToggle:hover span:first-child {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.panelToggle:focus-visible {
+  outline: 2px solid var(--sodium);
+  outline-offset: 4px;
+}
+
+.panelChevron {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid var(--text-muted);
+  border-bottom: 2px solid var(--text-muted);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.panelToggle[aria-expanded="true"] .panelChevron {
+  transform: translateY(2px) rotate(225deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panelChevron {
+    transition: none;
+  }
+}

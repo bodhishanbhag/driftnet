@@ -134,6 +134,7 @@ function Study({ s }: { s: LimitsStudy }) {
       </section>
 
       <Panel
+        defaultOpen
         id="grid"
         title="What we found, by brightness and speed"
         kicker="Recovery"

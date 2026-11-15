@@ -1,6 +1,7 @@
 import { surveySpeed, type SpeedRun } from "@/lib/speed";
 import { formatUtcDateTime } from "@/lib/format";
 import { staticRunLedger, staticSurvey } from "@/lib/staticData";
+import { Disclosure } from "@/components/Disclosure";
 import styles from "./SurveySpeed.module.css";
 
 const n0 = (x: number) => Math.round(x).toLocaleString("en-US");
@@ -46,6 +47,7 @@ export function SurveySpeedPanel() {
           </div>
         )}
       </dl>
+      <Disclosure summary="How these numbers are measured">
       <p className={styles.note}>
         Averaged over {s.nRuns} survey runs: {n0(s.tiles)} tiles (0.3° patches) in {s.hours.toFixed(1)} hours of run time. Each run is
         timed from planning to publishing, so this includes downloading the SPHEREx images, searching them, checking every new object
@@ -53,6 +55,7 @@ export function SurveySpeedPanel() {
         Since 14 November 2026, runs search with 10 parallel jobs, each working on 3 blocks of sky at once (before: 4 jobs, one block
         at a time), so recent runs pull the average up.
       </p>
+      </Disclosure>
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openPanels } from "./support/panels";
 import { installMockApi } from "./support/mockApi";
 
 /** The write-up loads when the reader nears it; scroll there. */
@@ -13,6 +14,7 @@ test.describe("with the AI endpoints", () => {
 
   test("the write-up replaces the template text, with linked numbers and the model", async ({ page }) => {
     await page.goto("/detective/candidate/?id=syn-unmatched");
+    await openPanels(page);
     await toExplanation(page);
     const panel = page.getByRole("region", { name: "In plain words" });
     await expect(panel.getByText("AI-written from the measurements below")).toBeVisible();
@@ -28,6 +30,7 @@ test.describe("with the AI endpoints", () => {
 
   test("ask answers with citations that link to the report", async ({ page }) => {
     await page.goto("/detective/candidate/?id=syn-unmatched");
+    await openPanels(page);
     await toExplanation(page);
     const ask = page.getByRole("region", { name: "Ask about this object" });
     await expect(ask).toBeVisible();
@@ -48,6 +51,7 @@ test.describe("with the AI endpoints", () => {
 
   test("search by description applies editable chips", async ({ page }) => {
     await page.goto("/detective/");
+    await openPanels(page);
     await expect(page.getByRole("link", { name: "(99999) Synthetic" })).toBeVisible();
     await page.getByRole("searchbox").fill("slow unexplained things");
     await page.getByRole("button", { name: "Search", exact: true }).click();
@@ -75,6 +79,7 @@ test.describe("with the AI endpoints", () => {
 
   test("a search the AI can't turn into a filter changes nothing", async ({ page }) => {
     await page.goto("/detective/");
+    await openPanels(page);
     await page.getByRole("searchbox").fill("gibberish");
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page.getByText("Synthetic: that didn't make a filter.")).toBeVisible();
@@ -85,6 +90,7 @@ test.describe("with the AI endpoints", () => {
 test("a rate-limited question shows the API's message", async ({ page }) => {
   await installMockApi(page, { ai: true, askStatus: 429 });
   await page.goto("/detective/candidate/?id=syn-known");
+  await openPanels(page);
   await toExplanation(page);
   const ask = page.getByRole("region", { name: "Ask about this object" });
   await ask.getByRole("button", { name: "Could it be a glitch?" }).click();
@@ -98,6 +104,7 @@ test.describe("without the AI endpoints", () => {
 
   test("the report keeps its own explanation and has no chat", async ({ page }) => {
     await page.goto("/detective/candidate/?id=syn-unmatched");
+    await openPanels(page);
     await toExplanation(page);
     await expect(page.getByText("Template text from the measurements")).toBeVisible();
     await expect(page.getByRole("region", { name: "Ask about this object" })).toHaveCount(0);
@@ -106,6 +113,7 @@ test.describe("without the AI endpoints", () => {
 
   test("search says it's off and the filters still work", async ({ page }) => {
     await page.goto("/detective/");
+    await openPanels(page);
     await page.getByRole("searchbox").fill("slow ones");
     await page.getByRole("button", { name: "Search", exact: true }).click();
     await expect(page.getByText(/isn't switched on right now/)).toBeVisible();
@@ -117,6 +125,7 @@ test.describe("without the AI endpoints", () => {
 
   test("distance filter uses the objects list", async ({ page }) => {
     await page.goto("/detective/?dist=main_belt");
+    await openPanels(page);
     await expect(page.getByRole("button", { name: "Remove filter: Main asteroid belt" })).toBeVisible();
     await expect(page.getByRole("link", { name: "(99999) Synthetic" })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Moving object B in / })).toHaveCount(0);

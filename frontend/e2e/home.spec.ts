@@ -13,14 +13,17 @@ test("home explains what the project does and how, with real survey numbers", as
   await expect(stats.getByText("SPHEREx images analyzed")).toBeVisible();
   await expect(stats.locator("dd").first()).toHaveText(/^\d[\d,]*$/);
 
-  await expect(page.getByRole("heading", { name: "A transparent search for moving objects, built on real data" })).toBeVisible();
-  for (const name of ["Find", "Verify", "Explain"]) await expect(page.getByText(name, { exact: true })).toBeVisible();
+  // The Planet X answer is one tap away, not a wall of text.
+  await page.getByText("Can this find Planet X?").click();
+  await expect(page.getByTestId("limiting-magnitude")).toBeVisible();
 
   await page.getByRole("link", { name: "How it works ↓" }).click();
   await expect(page).toHaveURL(/#how$/);
   const how = page.getByRole("region", { name: "From raw images to an evidence report" });
-  await expect(how.getByRole("listitem")).toHaveCount(6);
-  await expect(how.getByRole("heading", { name: "Check against the catalogs" })).toBeVisible();
+  const step = how.locator("summary").filter({ hasText: "Check if it's already known" });
+  await expect(how.locator("summary")).toHaveCount(5);
+  await step.click();
+  await expect(how.getByText(/two independent catalogs of known asteroids and comets/)).toBeVisible();
 
   await expect(page.getByRole("link", { name: /Where we've searched/ })).toHaveAttribute("href", /\/sky\/?$/);
   await expect(page.getByRole("link", { name: /What we could miss/ })).toHaveAttribute("href", /\/limits\/?$/);

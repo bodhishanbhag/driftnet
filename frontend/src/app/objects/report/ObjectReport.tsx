@@ -29,7 +29,7 @@ import { KnownObjectPanel } from "@/components/report/KnownObjectPanel";
 import { MeasurementTable } from "@/components/report/MeasurementTable";
 import { MotionPanel } from "@/components/report/MotionPanel";
 import { NeoPanel } from "@/components/report/NeoPanel";
-import { Panel } from "@/components/report/Panel";
+import { PANELS_EVENT, Panel } from "@/components/report/Panel";
 import { ProvenancePanel } from "@/components/report/ProvenancePanel";
 import { ScoresPanel } from "@/components/report/ScoresPanel";
 import { SpectrumPanel } from "@/components/report/SpectrumPanel";
@@ -289,7 +289,7 @@ function Report({ c, o, name, nameFor }: { c: CandidateDetail; o: ObjectDetail |
 
       <Deferred fallback={<ViewerSkeleton label="Loading the evidence" />}>
       <div className={styles.sections}>
-        <Panel id="evidence" title="See it move" kicker="Images" intro="The real SPHEREx images where this object was caught, zoomed in on its path.">
+        <Panel id="evidence" defaultOpen title="See it move" kicker="Images" intro="The real SPHEREx images where this object was caught, zoomed in on its path.">
           <WhenVisible minHeight={520}>
             <FieldContext candidate={c} />
           </WhenVisible>
@@ -309,7 +309,7 @@ function Report({ c, o, name, nameFor }: { c: CandidateDetail; o: ObjectDetail |
           <MeasurementTable detections={c.detections} />
         </Panel>
 
-        <WhenVisible minHeight={700}>
+        <WhenVisible minHeight={96}>
           <MotionPanel motion={c.motion} detections={c.detections} />
         </WhenVisible>
         <KnownObjectPanel known={c.known_object} detections={c.detections} minimal={c.record_level === "minimal"} />
@@ -318,12 +318,12 @@ function Report({ c, o, name, nameFor }: { c: CandidateDetail; o: ObjectDetail |
         <ScoresPanel scores={c.scores} />
         {anomaly && <UnusualPanel anomaly={anomaly} />}
         {c.spectrum && c.spectrum.points.length > 0 && (
-          <WhenVisible minHeight={400}>
+          <WhenVisible minHeight={96}>
             <SpectrumPanel spectrum={c.spectrum} />
           </WhenVisible>
         )}
         {o && c.spectrum && c.spectrum.points.length > 0 && (
-          <WhenVisible minHeight={560}>
+          <WhenVisible minHeight={96}>
             <CompositionPanel objectId={o.object_id} />
           </WhenVisible>
         )}
@@ -475,7 +475,16 @@ export function JplStatus({ known }: { known: CandidateDetail["known_object"] })
 /** Sticky jump links that highlight the section being read. */
 export function SectionNav({ sections }: { sections: readonly (readonly [string, string])[] }) {
   const [active, setActive] = useState<string | null>(null);
+  const [allOpen, setAllOpen] = useState(false);
+  const toggleAll = () => {
+    const next = !allOpen;
+    setAllOpen(next);
+    window.dispatchEvent(new CustomEvent(PANELS_EVENT, { detail: next }));
+  };
   const listRef = useRef<HTMLUListElement>(null);
+  // A clicked link wins for a moment: the panel it opens grows after the jump, which would
+  // otherwise leave the next (still short, collapsed) panel looking like the current one.
+  const pinned = useRef<{ id: string; until: number } | null>(null);
 
   // Work out the active section from positions on scroll. Sections mount lazily, so look them
   // up each time rather than observing a fixed set.
@@ -483,6 +492,10 @@ export function SectionNav({ sections }: { sections: readonly (readonly [string,
     let frame = 0;
     const update = () => {
       frame = 0;
+      if (pinned.current && performance.now() < pinned.current.until) {
+        setActive(pinned.current.id);
+        return;
+      }
       const line = window.innerHeight * 0.3;
       let current: string | null = null;
       for (const [id] of sections) {
@@ -515,11 +528,23 @@ export function SectionNav({ sections }: { sections: readonly (readonly [string,
       <ul ref={listRef}>
         {sections.map(([sid, label]) => (
           <li key={sid}>
-            <a href={`#${sid}`} aria-current={active === sid ? "true" : undefined}>
+            <a
+              href={`#${sid}`}
+              aria-current={active === sid ? "true" : undefined}
+              onClick={() => {
+                pinned.current = { id: sid, until: performance.now() + 1000 };
+                setActive(sid);
+              }}
+            >
               {label}
             </a>
           </li>
         ))}
+        <li>
+          <button type="button" className={styles.top} onClick={toggleAll}>
+            {allOpen ? "Close all" : "Open all"}
+          </button>
+        </li>
         <li>
           <a href="#main" className={styles.top}>
             ↑ Top

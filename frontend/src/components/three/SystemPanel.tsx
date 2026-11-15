@@ -19,9 +19,8 @@ export function SystemPanel({ context = "sky" }: { context?: "sky" | "objects" }
         {context === "sky" ? "The same objects, out in the solar system" : "Where these objects are, in 3D"}
       </h2>
       <p style={{ color: "var(--text-muted)", maxWidth: "70ch" }}>
-        {context === "sky" ? "The map above shows where each object appeared on the sky. This view shows" : "Each dot is an object from the list, shown"} where its fitted orbit puts it in space when SPHEREx
-        saw it, among the planets&apos; orbits. The direction to each object is measured; its distance is the uncertain part, because a
-        day or two of sightings fits many orbits. Point at a dot to see the range.
+        {context === "sky" ? "Where each object was in space when SPHEREx saw it." : "Each object from the list, placed in space."} Distances are
+        rough estimates. Point at a dot to see the range.
       </p>
       <WhenVisible minHeight={420}>
         <Suspense fallback={<div className={`skeleton ${styles.scene} ${styles.tall}`} role="status" aria-label="Loading the objects' positions" />}>

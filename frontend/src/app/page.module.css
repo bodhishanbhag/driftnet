@@ -43,20 +43,12 @@
       animation-range: exit 0% exit 90%;
     }
 
-    .capability,
-    .stage,
     .mode {
       animation: rise-in linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 70%;
     }
 
-    .pipeline::before {
-      transform-origin: top;
-      animation: draw-line linear both;
-      animation-timeline: view();
-      animation-range: entry 20% cover 70%;
-    }
   }
 }
 
@@ -166,43 +158,8 @@
 }
 
 /* What it does */
-.what {
-  margin-top: var(--space-8);
-}
-
-.whatHead {
-  max-width: 760px;
-  margin-bottom: var(--space-8);
-}
-
 .sectionLede {
   font-size: var(--text-lg);
-  color: var(--text-muted);
-}
-
-.capabilities {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.capability {
-  padding: var(--space-6);
-}
-
-.capability :global(.eyebrow) {
-  margin-bottom: var(--space-2);
-}
-
-.capability h3 {
-  margin-bottom: var(--space-3);
-}
-
-.capability p {
-  margin: 0;
   color: var(--text-muted);
 }
 
@@ -224,36 +181,23 @@
   }
 }
 
-.pipeline {
-  position: relative;
-  display: grid;
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.steps {
+  font-size: var(--text-md);
 }
 
-/* The line that joins the stages. */
-.pipeline::before {
-  content: "";
-  position: absolute;
-  top: 20px;
-  bottom: 20px;
-  left: 19px;
-  width: 2px;
-  background: linear-gradient(180deg, var(--track), var(--cool) 50%, var(--border));
-  opacity: 0.6;
+.steps summary > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
 }
 
-.stage {
-  position: relative;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: var(--space-4);
+.steps p {
+  margin: 0 0 0 56px;
 }
 
 .stageNo {
   display: grid;
+  flex: none;
   place-items: center;
   width: 40px;
   height: 40px;
@@ -265,13 +209,9 @@
   font-weight: 600;
 }
 
-.stage h3 {
-  margin: 8px 0 var(--space-2);
-}
-
-.stage p {
-  margin: 0;
-  color: var(--text-muted);
+.planetX {
+  max-width: 760px;
+  margin-top: var(--space-6);
 }
 
 .instrument {
