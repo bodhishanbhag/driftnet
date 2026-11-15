@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CATALOGS, CHECKED_CATALOGS, MATCH_RULE } from "@/lib/catalogs";
-import { CatalogCounter } from "./CatalogCounter";
 import styles from "./Catalogs.module.css";
 
 /**
@@ -15,7 +14,6 @@ export function CatalogMethod({ short = false }: { short?: boolean }) {
           Calling an object &ldquo;known&rdquo; is only as good as the catalog behind it, so every moving object is checked against
           several independent catalogs: {CHECKED_CATALOGS.map((f) => CATALOGS[f].name).join(" and ")}. {MATCH_RULE}
         </p>
-        <CatalogCounter boxed />
         <p>
           The limits: a catalogued object with a poorly known orbit can fall outside 15″ and look unexplained, and when only one catalog
           has answered, the identification is not yet independently confirmed. We run on very little computing power, so objects are
@@ -31,7 +29,6 @@ export function CatalogMethod({ short = false }: { short?: boolean }) {
         Every moving object we find is checked against several independent asteroid and comet catalogs, not one. Each row of an
         object&apos;s <strong>Catalog check</strong> shows what one of them answered.
       </p>
-      <CatalogCounter boxed />
       <ul className={styles.dbs}>
         {CHECKED_CATALOGS.map((f) => {
           const c = CATALOGS[f];

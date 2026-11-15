@@ -4,6 +4,7 @@ import { pageMeta } from "@/lib/meta";
 import Link from "next/link";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
 import { CatalogMethod } from "@/components/catalogs/CatalogMethod";
+import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
 import { GLOSSARY } from "@/components/Term";
 import { CLASSIFICATIONS, CLASSIFICATION_ORDER } from "@/lib/labels";
 import { blindSpeeds, summarizeLimits } from "@/lib/limits";
@@ -86,6 +87,18 @@ const SOURCES: { name: string; use: string; href: string; cite?: string }[] = [
     use: "Dividing an object's fluxes by the Sun's spectrum to get its reflectance.",
     href: "https://doi.org/10.1520/E0490",
     cite: "ASTM International, Standard Solar Constant and Zero Air Mass Solar Spectral Irradiance Tables (2014).",
+  },
+  {
+    name: "SPHEREx point-source sensitivity (limiting magnitude)",
+    use: "The single-visit and full-survey 5σ depths quoted on the home, about and limits pages.",
+    href: "https://arxiv.org/abs/2505.24856",
+    cite: "Crill et al. 2025, “The SPHEREx Sky Simulator”, arXiv:2505.24856; Doré et al. 2018, arXiv:1805.05489.",
+  },
+  {
+    name: "Predicted brightness of Planet Nine",
+    use: "The Planet X brightness we compare our limiting magnitude with.",
+    href: "https://arxiv.org/abs/2108.09868",
+    cite: "Brown & Batygin 2021, “The orbit of Planet Nine”, AJ, arXiv:2108.09868.",
   },
   {
     name: "JPL Small-Body Database (SBDB)",
@@ -196,12 +209,31 @@ export default function AboutPage() {
         <CatalogMethod />
       </section>
 
+      <section aria-labelledby="limiting-mag">
+        <h2 id="limiting-mag">Limiting magnitude, and can SPHEREx find Planet X?</h2>
+        <p>
+          The limiting magnitude is the faintest object that can still be detected (bigger numbers are fainter). It decides whether
+          Planet X is in reach of this data at all.
+        </p>
+        <LimitingMagnitudeSummary heading={false} />
+      </section>
+
       <section aria-labelledby="limitations">
         <h2 id="limitations">Honest limitations</h2>
         <p>Measured by planting simulated objects in real SPHEREx images and running the same pipeline on them.</p>
         <Limitations />
         <p>
           <Link href="/limits/">The full detection-limits study</Link>
+        </p>
+      </section>
+
+      <section aria-labelledby="advisor">
+        <h2 id="advisor">Expert review</h2>
+        <p>
+          We walked through the method, the detection limits and the Planet X question with{" "}
+          <strong>Dr. Tavarez-Brown</strong> (PhD, Astronomy, University of Washington; BA/MA, Physics, Hunter College of CUNY; BA,
+          Political Science, Yale). Her questions about how faint SPHEREx can see, and how long a Planet X search would take with this
+          data, are why the limiting magnitude is now stated on the home, about and limits pages. Any remaining errors are ours.
         </p>
       </section>
 

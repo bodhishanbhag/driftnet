@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FieldGrid } from "@/components/FieldGrid";
 import { SpacetimeFabric } from "@/components/home/SpacetimeFabric";
 import { HomeSky } from "@/components/home/HomeSky";
-import { CatalogCounter } from "@/components/catalogs/CatalogCounter";
+import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
 import { HowToUse } from "@/components/home/HowToUse";
 import { TourButton } from "@/components/tour/Tour";
 import { SpectralStrip } from "@/components/SpectralStrip";
@@ -120,7 +120,7 @@ export default function LandingPage() {
               ))}
             </dl>
           )}
-          <CatalogCounter />
+          <LimitingMagnitudeSummary />
           {survey && <p className={styles.asOf}>Survey data as of {formatUtcDate(survey.generated_utc)}.</p>}
         </div>
       </section>
