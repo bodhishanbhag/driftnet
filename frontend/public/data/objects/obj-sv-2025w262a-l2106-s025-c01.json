@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.463a5e3",
-  "build_run_id": "gh-43572164382-1",
+  "build_run_id": "gh-43626709896-1",
   "object_id": "obj-sv-2025w262a-l2106-s025-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1730,7 +1730,11 @@
     "observer": null,
     "query_utc": "2026-11-08T23:56:35Z",
     "enrichment": "pipeline",
-    "jpl_links": null
+    "jpl_links": null,
+    "cross_checks": [],
+    "agreeing_catalogs": 0,
+    "checked_catalogs": 0,
+    "catalogs_disagree": false
   },
   "scores": {
     "motion_consistency": 0.669,
@@ -1742,45 +1746,45 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.609,
-    "rank": 74,
-    "n_ranked": 680,
-    "reason_plain": "Moving 5.3× slower than the median of the objects we have tracked",
+    "score": 0.597,
+    "rank": 84,
+    "n_ranked": 700,
+    "reason_plain": "Moving 5.2× slower than the median of the objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 0.7238,
-        "median": 1.4484,
-        "z": -3.14
+        "median": 1.4437,
+        "z": -3.06
       },
       {
         "name": "cross_ecliptic",
         "label": "motion across the ecliptic",
         "value": 0.1141,
-        "median": 0.1185,
+        "median": 0.1186,
         "z": -0.04
       },
       {
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 2.4131,
-        "median": 0.905,
+        "median": 0.9074,
         "z": 1.99
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.5038,
-        "median": 0.3918,
-        "z": 1.3
+        "median": 0.3921,
+        "z": 1.31
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": 0.0032,
-        "median": -0.3675,
-        "z": 0.6
+        "median": -0.3722,
+        "z": 0.62
       }
     ],
     "method": "isolation_forest_v1",

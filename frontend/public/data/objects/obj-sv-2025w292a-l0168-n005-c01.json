@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.56e0ec2",
-  "build_run_id": "gh-43572164382-1",
+  "build_run_id": "gh-43626709896-1",
   "object_id": "obj-sv-2025w292a-l0168-n005-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1651,7 +1651,11 @@
     "observer": null,
     "query_utc": null,
     "enrichment": "static",
-    "jpl_links": null
+    "jpl_links": null,
+    "cross_checks": [],
+    "agreeing_catalogs": 0,
+    "checked_catalogs": 0,
+    "catalogs_disagree": false
   },
   "scores": {
     "motion_consistency": 0.775,
@@ -1663,45 +1667,45 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.066,
-    "rank": 614,
-    "n_ranked": 680,
+    "score": 0.065,
+    "rank": 642,
+    "n_ranked": 700,
     "reason_plain": "0.4° from the ecliptic, closer to it than most objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 1.3488,
-        "median": 1.4484,
-        "z": -0.43
+        "median": 1.4437,
+        "z": -0.4
       },
       {
         "name": "cross_ecliptic",
         "label": "motion across the ecliptic",
         "value": 0.034,
-        "median": 0.1185,
+        "median": 0.1186,
         "z": -0.7
       },
       {
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 0.368,
-        "median": 0.905,
+        "median": 0.9074,
         "z": -0.71
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.4131,
-        "median": 0.3918,
+        "median": 0.3921,
         "z": 0.25
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": -0.2728,
-        "median": -0.3675,
-        "z": 0.15
+        "median": -0.3722,
+        "z": 0.16
       }
     ],
     "method": "isolation_forest_v1",

@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.4b97a21",
-  "build_run_id": "gh-43572164382-1",
+  "build_run_id": "gh-43626709896-1",
   "object_id": "obj-sv-2025w182b-l3141-s007-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1421,7 +1421,11 @@
     "observer": null,
     "query_utc": null,
     "enrichment": "static",
-    "jpl_links": null
+    "jpl_links": null,
+    "cross_checks": [],
+    "agreeing_catalogs": 0,
+    "checked_catalogs": 0,
+    "catalogs_disagree": false
   },
   "scores": {
     "motion_consistency": 0.881,
@@ -1433,45 +1437,45 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.449,
-    "rank": 141,
-    "n_ranked": 680,
+    "score": 0.433,
+    "rank": 159,
+    "n_ranked": 700,
     "reason_plain": "Infrared colour (spectral slope -3.22) bluer than most objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 1.5854,
-        "median": 1.4484,
-        "z": 0.59
+        "median": 1.4437,
+        "z": 0.6
       },
       {
         "name": "cross_ecliptic",
         "label": "motion across the ecliptic",
         "value": 0.0793,
-        "median": 0.1185,
-        "z": -0.32
+        "median": 0.1186,
+        "z": -0.33
       },
       {
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 0.5613,
-        "median": 0.905,
-        "z": -0.45
+        "median": 0.9074,
+        "z": -0.46
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.3647,
-        "median": 0.3918,
+        "median": 0.3921,
         "z": -0.32
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": -3.2185,
-        "median": -0.3675,
-        "z": -4.6
+        "median": -0.3722,
+        "z": -4.67
       }
     ],
     "method": "isolation_forest_v1",

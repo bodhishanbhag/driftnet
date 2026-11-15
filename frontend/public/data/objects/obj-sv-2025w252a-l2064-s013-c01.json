@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.5dffaee",
-  "build_run_id": "gh-43572164382-1",
+  "build_run_id": "gh-43626709896-1",
   "object_id": "obj-sv-2025w252a-l2064-s013-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1041,7 +1041,11 @@
     "observer": null,
     "query_utc": null,
     "enrichment": "static",
-    "jpl_links": null
+    "jpl_links": null,
+    "cross_checks": [],
+    "agreeing_catalogs": 0,
+    "checked_catalogs": 0,
+    "catalogs_disagree": false
   },
   "scores": {
     "motion_consistency": 0.557,
@@ -1053,44 +1057,44 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.597,
-    "rank": 76,
-    "n_ranked": 680,
+    "score": 0.635,
+    "rank": 69,
+    "n_ranked": 700,
     "reason_plain": "Moving at 58° to the ecliptic, steeper than most objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 1.4999,
-        "median": 1.4484,
-        "z": 0.22
+        "median": 1.4437,
+        "z": 0.24
       },
       {
         "name": "cross_ecliptic",
         "label": "motion across the ecliptic",
         "value": 0.8459,
-        "median": 0.1185,
-        "z": 6.03
+        "median": 0.1186,
+        "z": 6.04
       },
       {
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 1.575,
-        "median": 0.905,
-        "z": 0.89
+        "median": 0.9074,
+        "z": 0.88
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.2894,
-        "median": 0.3918,
-        "z": -1.19
+        "median": 0.3921,
+        "z": -1.2
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": null,
-        "median": -0.3675,
+        "median": -0.3722,
         "z": null
       }
     ],
