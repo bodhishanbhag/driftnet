@@ -89,3 +89,8 @@ export function staticGrowth(): GrowthDay[] {
   const g = read<{ days: GrowthDay[] }>("growth.json");
   return Array.isArray(g?.days) ? g.days : [];
 }
+
+/** Every survey run (tiles searched, start and finish times), for the processing-speed figures. */
+export function staticRunLedger(): { started_utc: string | null; finished_utc: string | null; n_tiles_processed: number }[] | null {
+  return read<{ runs: { started_utc: string | null; finished_utc: string | null; n_tiles_processed: number }[] }>("survey/ledger.json")?.runs ?? null;
+}

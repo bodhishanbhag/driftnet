@@ -15,8 +15,11 @@
 #           and commit to main. Cloudflare Workers Builds and Vercel deploy that commit; the
 #           Worker's cron then only re-checks unexplained and unchecked candidates.
 #
-# Cost: about 10 runner-seconds per tile searched (was ~70 before block search), so the default
-# chunk (4 shards x 45 min) searches roughly 1,000 tiles. While the repository is private,
+# Speed: each shard searches 3 blocks at once in separate processes (detection and linking are
+# single-threaded and were about two thirds of a block's time), and a chunk runs 10 shards. Before
+# this, 4 one-block-at-a-time shards searched about 645 tiles per hour of run time (31 runs,
+# Oct 30 - Nov 14 2026); the ledger records every run's tiles and duration, and the Sky map
+# shows the average. While the repository is private,
 # Actions minutes are limited by the account's plan: if jobs fail in seconds with "recent
 # account payments have failed or your spending limit needs to be increased", the limit is
 # reached (Settings > Billing); making the repository public makes standard runners free.
@@ -27,13 +30,16 @@ on:
     inputs:
       segments:
         description: 'Week segments: next:N (next N unfinished), auto:N, or release/segment'
-        default: next:3
+        default: next:4
       max_tiles:
         description: Most tiles to search in this run
-        default: "1500"
+        default: "4000"
       shards:
-        description: Parallel build jobs (1-8)
-        default: "4"
+        description: Parallel build jobs (1-16)
+        default: "10"
+      workers:
+        description: Blocks each shard searches at once (1-4)
+        default: "3"
       deadline_min:
         description: Minutes each shard may start new blocks for
         default: "45"
@@ -57,8 +63,9 @@ permissions:
   contents: write
 
 env:
-  SEGMENTS: ${{ inputs.segments || 'next:3' }}
-  MAX_TILES: ${{ inputs.max_tiles || '1500' }}
+  SEGMENTS: ${{ inputs.segments || 'next:4' }}
+  MAX_TILES: ${{ inputs.max_tiles || '4000' }}
+  WORKERS: ${{ inputs.workers || '3' }}
   DEADLINE_MIN: ${{ inputs.deadline_min || '45' }}
   TRIAGE_LIMIT: ${{ inputs.triage_limit || '400' }}
   # The home page growth chart reads identified/unidentified counts from the live Worker.
@@ -77,8 +84,8 @@ jobs:
         run: echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - id: shards
         run: |
-          n="${{ inputs.shards || '4' }}"
-          python3 -c "import json,sys; n=max(1,min(8,int(sys.argv[1]))); print('list='+json.dumps(list(range(n))))" "$n" >> "$GITHUB_OUTPUT"
+          n="${{ inputs.shards || '10' }}"
+          python3 -c "import json,sys; n=max(1,min(16,int(sys.argv[1]))); print('list='+json.dumps(list(range(n))))" "$n" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -126,7 +133,7 @@ jobs:
         run: |
           spherex-px survey-build --plan var/survey-plan.json \
             --shard ${{ matrix.shard }} --of ${{ strategy.job-total }} \
-            --deadline-min $DEADLINE_MIN --out ../shard-out
+            --deadline-min $DEADLINE_MIN --workers $WORKERS --out ../shard-out
       - uses: actions/upload-artifact@v4
         with:
           name: shard-${{ matrix.shard }}

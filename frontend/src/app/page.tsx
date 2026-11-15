@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FieldGrid } from "@/components/FieldGrid";
 import { SpacetimeFabric } from "@/components/home/SpacetimeFabric";
 import { HomeSky } from "@/components/home/HomeSky";
+import { HeroBlink } from "@/components/home/HeroBlink";
+import { heroBlink } from "@/lib/heroBlink";
 import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
 import { HowToUse } from "@/components/home/HowToUse";
 import { TourButton } from "@/components/tour/Tour";
@@ -68,6 +70,7 @@ function skyShare(area: number) {
 }
 
 export default function LandingPage() {
+  const blink = heroBlink();
   // Real numbers from the data the site was built with.
   const survey = staticSurvey();
   const candidates = staticCandidates();
@@ -124,6 +127,25 @@ export default function LandingPage() {
           {survey && <p className={styles.asOf}>Survey data as of {formatUtcDate(survey.generated_utc)}.</p>}
         </div>
       </section>
+
+      {blink && (
+        <div className="container">
+          <section className={`section ${styles.seeIt}`} aria-labelledby="see-it-heading">
+            <div className={styles.seeItText}>
+              <p className="eyebrow">See it move</p>
+              <h2 id="see-it-heading">Two real SPHEREx images, hours apart</h2>
+              <p>
+                Stars stay put. The circled dot doesn&apos;t: it moved between two visits. Its speed suggests a main-belt asteroid, and it
+                hasn&apos;t been matched to a known object yet. Every object on this site was found this
+                way, by comparing SPHEREx images of the same patch of sky taken at different times.
+              </p>
+            </div>
+            <div className={styles.seeItPlate}>
+              <HeroBlink {...blink} lazy />
+            </div>
+          </section>
+        </div>
+      )}
 
       <div className="container">
         <HowToUse />

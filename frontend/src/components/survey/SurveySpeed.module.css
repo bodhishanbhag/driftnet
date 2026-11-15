@@ -1,0 +1,45 @@
+.panel {
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+
+.panel h2 {
+  margin-top: var(--space-1);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.stats > div {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.stats dt {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.stats dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xl);
+  white-space: nowrap;
+}
+
+.stats small {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.note {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 90ch;
+}

@@ -539,6 +539,26 @@ def search_block(tiles: list[PlannedTile], out: Path) -> list[TileResult]:
     return results
 
 
+def _worker_init(cache_root: str) -> None:
+    """Set up one parallel block worker: its own image cache (blocks clear the cache after each
+    search, so workers must not share one) and the same logging as the main process."""
+    import logging
+
+    cache = Path(cache_root) / f"w{os.getpid()}"
+    os.environ["SPX_CACHE_DIR"] = str(cache)
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
+
+
+def _search_block_job(b: list[PlannedTile], out: Path) -> list[TileResult]:
+    _clear_range_cache()
+    try:
+        return search_block(b, out)
+    finally:
+        _clear_range_cache()
+
+
 def build_share(
     plan_file: Path,
     shard: int,
@@ -547,25 +567,74 @@ def build_share(
     *,
     block: int = BLOCK,
     deadline_s: float | None = None,
+    workers: int = 1,
 ) -> list[TileResult]:
     """Search blocks shard, shard+of, ... of the plan; keep tiles with real movers.
 
     With ``deadline_s`` no new block starts after that many seconds: tiles not reached are left
     out of the report, so they stay unsearched in the ledger and the next run picks them up.
+
+    With ``workers`` > 1, that many blocks are searched at once in separate processes. Detection
+    and linking are single-threaded and take about two thirds of a block's time, so this uses
+    the runner's other cores while images download.
     """
     import time
 
     t0 = time.monotonic()
     tiles = [PlannedTile(**t) for t in json.loads(plan_file.read_text())]
     blocks = group_blocks(tiles, block)[shard::of]
+    late = lambda: deadline_s is not None and time.monotonic() - t0 > deadline_s  # noqa: E731
     results: list[TileResult] = []
-    for i, b in enumerate(blocks):
-        if deadline_s is not None and time.monotonic() - t0 > deadline_s:
-            log.warning("deadline reached: %d of %d blocks searched", i, len(blocks))
-            break
-        # Image bytes read for one block are not reused by the next; dropping them keeps a
-        # shard inside a CI runner's disk.
-        _clear_range_cache()
-        results.extend(search_block(b, out))
-    _clear_range_cache()
+    if workers <= 1:
+        for i, b in enumerate(blocks):
+            if late():
+                log.warning("deadline reached: %d of %d blocks searched", i, len(blocks))
+                break
+            # Image bytes read for one block are not reused by the next; dropping them keeps a
+            # shard inside a CI runner's disk.
+            results.extend(_search_block_job(b, out))
+        return results
+
+    import multiprocessing as mp
+    from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+    from concurrent.futures.process import BrokenProcessPool
+
+    from .settings import get_settings
+
+    cache_root = get_settings().cache_dir / "workers"
+    started = 0
+    broken = False
+    with ProcessPoolExecutor(
+        workers,
+        mp_context=mp.get_context("spawn"),
+        initializer=_worker_init,
+        initargs=(str(cache_root),),
+    ) as ex:
+        running: set = set()
+        while True:
+            try:
+                while (
+                    started < len(blocks) and len(running) < workers and not late() and not broken
+                ):
+                    running.add(ex.submit(_search_block_job, blocks[started], out))
+                    started += 1
+            except BrokenProcessPool:
+                broken = True
+            if not running:
+                break
+            done, running = wait(running, return_when=FIRST_COMPLETED)
+            for f in done:
+                try:
+                    results.extend(f.result())
+                except BrokenProcessPool:
+                    broken = True
+                except Exception:  # one bad block must not sink the shard
+                    log.exception("block worker failed")
+    if broken:
+        # A worker died (out of memory, say). Blocks it held are left out of the report, so
+        # their tiles stay unsearched in the ledger and the next run retries them.
+        log.error("block workers stopped early: %d of %d blocks started", started, len(blocks))
+    elif started < len(blocks):
+        log.warning("deadline reached: %d of %d blocks searched", started, len(blocks))
+    shutil.rmtree(cache_root, ignore_errors=True)
     return results

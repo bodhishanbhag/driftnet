@@ -41,7 +41,9 @@ class Settings:
 
     @property
     def cache_dir(self) -> Path:
-        return self.data_dir / "cache"
+        # SPX_CACHE_DIR gives each parallel survey worker its own image cache.
+        override = os.environ.get("SPX_CACHE_DIR")
+        return Path(override) if override else self.data_dir / "cache"
 
     @property
     def products_dir(self) -> Path:

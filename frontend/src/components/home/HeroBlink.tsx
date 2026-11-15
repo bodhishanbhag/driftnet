@@ -30,6 +30,8 @@ export interface HeroBlinkProps {
   wavelengthMatched: boolean;
   fieldHref: string;
   objectHref: string | null;
+  /** Below the first screen: load the images lazily instead of with high priority. */
+  lazy?: boolean;
 }
 
 const PERIOD_MS = 800;
@@ -39,7 +41,7 @@ const PERIOD_MS = 800;
  * plates. It blinks on its own only while on screen and only without a reduced-motion preference;
  * otherwise the visitor flips it.
  */
-export function HeroBlink({ frames, widthPx, heightPx, place, interval, shift, wavelengthMatched, fieldHref, objectHref }: HeroBlinkProps) {
+export function HeroBlink({ frames, widthPx, heightPx, place, interval, shift, wavelengthMatched, fieldHref, objectHref, lazy = false }: HeroBlinkProps) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -82,7 +84,8 @@ export function HeroBlink({ frames, widthPx, heightPx, place, interval, shift, w
             className={styles.image}
             data-shown={i === index}
             aria-hidden={i !== index}
-            fetchPriority={i === 0 ? "high" : "low"}
+            fetchPriority={lazy ? "low" : i === 0 ? "high" : "low"}
+            loading={lazy ? "lazy" : undefined}
             decoding="async"
           />
         ))}
