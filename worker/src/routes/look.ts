@@ -18,7 +18,12 @@ import { SCHEMA_VERSION, workerVersion } from "../version";
 export const look = new Hono<AppEnv>();
 
 export const IRSA_SIA = "https://irsa.ipac.caltech.edu/SIA";
-export const CDS_SESAME = "https://cds.unistra.fr/cgi-bin/nph-sesame/-oxp/SNV";
+/** Sesame name resolver: the CfA mirror first (CDS's own server refuses some Cloudflare connections). */
+export const SESAME_MIRRORS = [
+  "https://vizier.cfa.harvard.edu/viz-bin/nph-sesame/-oxp/SNV",
+  "https://cds.unistra.fr/cgi-bin/nph-sesame/-oxp/SNV",
+  "http://cdsweb.u-strasbg.fr/cgi-bin/nph-sesame/-oxp/SNV",
+];
 const IRSA_HOST = "https://irsa.ipac.caltech.edu/";
 /** SIA collections to try, newest release first. */
 export const SIA_COLLECTIONS = ["spherex_dr1", "spherex_qr2"];
@@ -255,12 +260,18 @@ export function parseSesame(xml: string): Resolved | null {
 look.get("/resolve", async (c) => {
   const name = (c.req.query("name") ?? "").trim();
   if (!name || name.length > 80 || /[<>]/.test(name)) throw badRequest("name is required (up to 80 characters)");
-  const res = await fetchUpstream<string>(c.get("deps"), "CDS Sesame", `${CDS_SESAME}?${encodeURIComponent(name)}`, {
-    as: "text",
-    ttlSeconds: 604_800,
-    timeoutMs: 12_000,
-  });
-  const r = parseSesame(res.data);
+  let xml: string | null = null;
+  let last: unknown = null;
+  for (const base of SESAME_MIRRORS) {
+    try {
+      xml = (await fetchUpstream<string>(c.get("deps"), "CDS Sesame", `${base}?${encodeURIComponent(name)}`, { as: "text", ttlSeconds: 604_800, timeoutMs: 10_000 })).data;
+      break;
+    } catch (err) {
+      last = err;
+    }
+  }
+  if (xml === null) throw last instanceof Error ? last : new UpstreamError("CDS Sesame", "unreachable");
+  const r = parseSesame(xml);
   if (!r) throw new ApiError(404, `no object called "${name}" was found in SIMBAD, NED or VizieR`);
   c.header("Cache-Control", "public, max-age=86400");
   return c.json({ query: name, ...r });

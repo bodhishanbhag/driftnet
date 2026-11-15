@@ -88,6 +88,10 @@ describe("look", () => {
     const { get } = makeClient({ upstream: () => new Response(xml) });
     const body = await json(await get("/api/look/resolve?name=Barnard%27s%20Star"));
     expect(body).toMatchObject({ name: "Barnard's Star", pm_ra_mas_yr: -802.803, epoch_year: 2000 });
+    // CDS's own server failing: the next mirror answers.
+    let n = 0;
+    const flaky = makeClient({ upstream: () => (n++ === 0 ? new Response("x", { status: 525 }) : new Response(xml)) });
+    expect((await flaky.get("/api/look/resolve?name=Barnard")).status).toBe(200);
     const none = makeClient({ upstream: () => new Response("<Sesame><Target><INFO>*** Nothing found ***</INFO></Target></Sesame>") });
     expect((await none.get("/api/look/resolve?name=zzz")).status).toBe(404);
   });

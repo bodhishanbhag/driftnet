@@ -76,7 +76,7 @@ export const PRESETS: Preset[] = [
     key: "rdra",
     name: "R Draconis",
     what: "A pulsating red giant (Mira variable, 246-day cycle)",
-    look: "It swells and shrinks, changing brightness many times over in visible light and less in the infrared. It sits near the north ecliptic pole, which SPHEREx sees often, so there are many images.",
+    look: "It swells and shrinks, changing brightness hundreds of times over in visible light and less in the infrared. It is so bright that its core saturates SPHEREx's detector, so its brightness can only be estimated from its halo, and the chart says whether the change beats the noise.",
     ra_deg: 248.1675,
     dec_deg: 66.755,
     pm_ra_mas_yr: null,

@@ -94,6 +94,9 @@ export function LookView() {
   const [playing, setPlaying] = useState(true);
   const [mode, setMode] = useState<"blink" | "diff" | "stack">("blink");
   const [failed, setFailed] = useState(0);
+  /** A problem with what was typed (shown by the search box, whatever is on screen). */
+  const [formError, setFormError] = useState<string | null>(null);
+  const [resolving, setResolving] = useState(false);
   const abort = useRef<AbortController | null>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
 
@@ -298,9 +301,10 @@ export function LookView() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     const p = parseTarget(query);
     if (p.kind === "error") {
-      setStatus({ kind: "error", message: p.message });
+      setFormError(p.message);
       return;
     }
     if (p.kind === "coords") {
@@ -312,12 +316,15 @@ export function LookView() {
       void lookAt({ ...preset, label: preset.name, preset }, preset.detector);
       return;
     }
-    setStatus({ kind: "busy", message: `Looking up "${p.name}"…` });
+    setResolving(true);
     try {
       const r = await getJson<Resolved>(`/api/look/resolve?name=${encodeURIComponent(p.name)}`, new AbortController().signal);
       void lookAt({ ...r, label: r.name || p.name }, detector);
     } catch (err) {
-      setStatus({ kind: "error", message: (err as Error).message });
+      const msg = (err as Error).message;
+      setFormError(/not found|no object/i.test(msg) ? `No star or galaxy called "${p.name}" was found. Check the spelling, or type coordinates.` : `The name lookup service didn't answer (${msg}). Try coordinates instead.`);
+    } finally {
+      setResolving(false);
     }
   };
 
@@ -345,10 +352,15 @@ export function LookView() {
             autoComplete="off"
             spellCheck={false}
           />
-          <button type="submit" className="button">
-            Look
+          <button type="submit" className="button" disabled={resolving}>
+            {resolving ? "Finding…" : "Look"}
           </button>
         </div>
+        {formError && (
+          <p className={styles.formError} role="alert">
+            {formError}
+          </p>
+        )}
       </form>
 
       <div className={styles.presets} role="group" aria-label="The challenge's example targets">
@@ -361,6 +373,7 @@ export function LookView() {
             aria-pressed={target?.preset?.key === t.key}
             onClick={() => {
               setQuery(t.name);
+              setFormError(null);
               void lookAt({ ...t, label: t.name, preset: t }, t.detector);
             }}
           >
