@@ -7,7 +7,9 @@ import type { BackdropVariant } from "./variant";
  * - the stars sit at three depths, so the view has real parallax as it turns;
  * - the pointer turns the view a little, and an object near the pointer gets a tracking reticle,
  *   the way the pipeline marks a moving source;
- * - a click on empty page background sends a comet across the sky;
+ * - a click on empty page background sends a comet across the sky; a click while the reticle is
+ *   locked on an object tracks it: the reticle snaps shut, the view eases in, its orbit or path is
+ *   drawn with predicted sightings along it, and a small label names it;
  * - scrolling turns the scene and flies forward;
  * - a few objects leave "sightings" (mint dots, one per visit) as they move: the idea of the site.
  *
@@ -119,17 +121,34 @@ function points(pos: number[], col: number[], size: number[], mat: THREE.ShaderM
 interface Rock {
   /** Where the rock is, in its parent's frame, at time t (seconds). */
   at: (t: number, out: THREE.Vector3) => void;
+  /** Angular speed (rad/s) when it orbits; absent for straight drifters. */
+  orbitSpeed?: number;
+  /** Drift seconds to draw for straight drifters. */
+  drift?: number;
   scale: number;
   spin: THREE.Vector3;
   phase: number;
+}
+
+/** Something the reticle can lock onto. */
+interface Pickable {
+  pos: THREE.Vector3;
+  size: number;
+  /** Its world position at time t (seconds). */
+  path: (t: number, out: THREE.Vector3) => THREE.Vector3;
+  /** Seconds of path to draw when tracked: one orbit, or a stretch of straight drift (0 when still). */
+  span: number;
+  /** True when path is a closed orbit; false for straight drift drawn on both sides of now. */
+  closed: boolean;
+  label: string;
 }
 
 /** One built scene: its objects plus how to move them. */
 interface Built {
   root: THREE.Group;
   update: (t: number, dt: number) => void;
-  /** World positions the reticle may lock onto. */
-  pickables: () => { pos: THREE.Vector3; size: number }[];
+  /** Objects the reticle may lock onto, at their current world positions. */
+  pickables: () => Pickable[];
   dispose: () => void;
 }
 
@@ -165,7 +184,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     // Narrow screens: pull back so the scene still fits.
-    camera.fov = small ? 70 : 55;
+    camera.fov = (small ? 70 : 55) * (1 - 0.18 * track.zoom);
     camera.updateProjectionMatrix();
     starMat.uniforms.uDpr!.value = dpr;
     sightMat.uniforms.uDpr!.value = dpr;
@@ -232,7 +251,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
   const rockMat = new THREE.MeshStandardMaterial({ color: "#a7b4c8", roughness: 0.95, metalness: 0.05, flatShading: true });
 
   /** Instanced rocks, split across the shapes. */
-  function rockField(rocks: Rock[], parent: THREE.Object3D) {
+  function rockField(rocks: Rock[], parent: THREE.Object3D, label: string) {
     const meshes = rockGeos.map((g, k) => {
       const count = rocks.filter((_, i) => i % rockGeos.length === k).length;
       const m = new THREE.InstancedMesh(g, rockMat, Math.max(1, count));
@@ -252,6 +271,10 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     const tmp = new THREE.Object3D();
     const p = new THREE.Vector3();
     const worldPos = rocks.map(() => new THREE.Vector3());
+    const paths = rocks.map((rk) => (t: number, out: THREE.Vector3) => {
+      rk.at(t, out);
+      return out.applyMatrix4(parent.matrixWorld);
+    });
     return {
       update(t: number) {
         rocks.forEach((rk, i) => {
@@ -270,7 +293,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
           rk.at(time, worldPos[i]!);
           worldPos[i]!.applyMatrix4(parent.matrixWorld);
         });
-        return worldPos.map((pos, i) => ({ pos, size: rocks[i]!.scale }));
+        return worldPos.map((pos, i): Pickable => {
+          const rk = rocks[i]!;
+          const orbiting = rk.orbitSpeed !== undefined;
+          const span = orbiting ? (rk.orbitSpeed! > 0 ? (Math.PI * 2) / rk.orbitSpeed! : 0) : (rk.drift ?? 0);
+          return { pos, size: rk.scale, path: paths[i]!, span, closed: orbiting, label };
+        });
       },
       dispose() {
         for (const m of meshes) {
@@ -329,6 +357,113 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     scene.add(l);
     return { obj: l, mat: m, geo: g, target: null as THREE.Vector3 | null, size: 1, shown: 0, spin: 0 };
   })();
+
+  const proj = new THREE.Vector3();
+
+  // ---------- tracking: a click on a locked-on object follows it and draws its orbit ----------
+  const GOLD = new THREE.Color("#ffcf5a");
+  const TRACK_N = 240;
+  const TRACK_SECONDS = 9;
+  const trackGeo = new THREE.BufferGeometry();
+  const trackPos = new Float32Array(TRACK_N * 2 * 3);
+  const trackCol = new Float32Array(TRACK_N * 2 * 3);
+  trackGeo.setAttribute("position", new THREE.BufferAttribute(trackPos, 3));
+  trackGeo.setAttribute("color", new THREE.BufferAttribute(trackCol, 3));
+  const trackMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending });
+  const trackLine = new THREE.LineSegments(trackGeo, trackMat);
+  trackLine.frustumCulled = false;
+  trackLine.renderOrder = 9;
+  scene.add(trackLine);
+  const label = document.createElement("div");
+  label.setAttribute("aria-hidden", "true");
+  label.dataset.backdropLabel = "";
+  Object.assign(label.style, {
+    position: "fixed",
+    left: "0",
+    top: "0",
+    zIndex: "-1",
+    pointerEvents: "none",
+    font: "600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace",
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    color: "#ffcf5a",
+    textShadow: "0 1px 3px rgb(11 31 58 / 0.9)",
+    whiteSpace: "nowrap",
+    opacity: "0",
+    transition: "opacity 0.3s ease",
+  } satisfies Partial<CSSStyleDeclaration>);
+  document.body.appendChild(label);
+  const track = {
+    target: null as Pickable | null,
+    t0: 0,
+    /** 0 → 1 while locking on, back to 0 when released. */
+    shown: 0,
+    zoom: 0,
+    yaw: 0,
+    pitch: 0,
+  };
+  const trackTmp = new THREE.Vector3();
+  const trackPrev = new THREE.Vector3();
+  const startTrack = (p: Pickable) => {
+    track.target = p;
+    track.t0 = time;
+    label.textContent = `◎ Tracking · ${p.label}`;
+    // Predicted sightings ahead of it, the way the pipeline links visits into a track.
+    if (p.span > 0) {
+      const ahead = p.closed ? Math.min(p.span * 0.12, 12) : Math.min(p.span * 0.4, 8);
+      for (let i = 1; i <= 5; i++) addSighting(p.path(time + (ahead * i) / 5, trackTmp));
+    }
+  };
+  const endTrack = () => {
+    track.target = null;
+  };
+  const drawTrack = (dt: number) => {
+    const p = track.target;
+    if (p && time - track.t0 > TRACK_SECONDS) endTrack();
+    const want = track.target ? 1 : 0;
+    track.shown += (want - track.shown) * Math.min(1, dt * 4);
+    if (!p || track.shown < 0.01) {
+      trackLine.visible = false;
+      label.style.opacity = "0";
+      return;
+    }
+    trackLine.visible = p.span > 0;
+    if (p.span > 0) {
+      // Grow the drawn path from the object outward over the first second.
+      const grow = Math.min(1, (time - track.t0) / 1.1 + (reduce ? 1 : 0));
+      const start = p.closed ? time : time - (p.span / 2) * grow;
+      const len = (p.closed ? p.span : p.span) * grow;
+      const jump = p.closed ? Infinity : 40;
+      let n = 0;
+      p.path(start, trackPrev);
+      for (let i = 1; i <= TRACK_N; i++) {
+        p.path(start + (len * i) / TRACK_N, trackTmp);
+        // Skip the wrap-around jump of a drifter leaving one side of the field for the other.
+        if (trackTmp.distanceTo(trackPrev) < jump) {
+          const k = p.closed ? 1 - (i / TRACK_N) * 0.75 : 1 - Math.abs(i / TRACK_N - 0.5) * 1.4;
+          trackPos.set([trackPrev.x, trackPrev.y, trackPrev.z, trackTmp.x, trackTmp.y, trackTmp.z], n * 6);
+          trackCol.set([GOLD.r * k, GOLD.g * k, GOLD.b * k, GOLD.r * k, GOLD.g * k, GOLD.b * k], n * 6);
+          n++;
+        }
+        trackPrev.copy(trackTmp);
+      }
+      trackGeo.setDrawRange(0, n * 2);
+      trackGeo.getAttribute("position").needsUpdate = true;
+      trackGeo.getAttribute("color").needsUpdate = true;
+      const fade = Math.min(1, (TRACK_SECONDS - (time - track.t0)) / 1.5);
+      trackMat.opacity = 0.9 * track.shown * Math.max(0, fade);
+    }
+    // The label sits just under the object.
+    p.path(time, trackTmp);
+    proj.copy(trackTmp).project(camera);
+    const sx = (proj.x * 0.5 + 0.5) * w;
+    const sy = (-proj.y * 0.5 + 0.5) * h;
+    // Flip to the left of the object near the right edge so the label never runs off screen.
+    const lw = label.offsetWidth;
+    const lx = sx + 18 + lw > w - 8 ? sx - 18 - lw : sx + 18;
+    label.style.transform = `translate(${Math.round(Math.max(8, lx))}px, ${Math.round(Math.min(h - 24, sy + 16))}px)`;
+    label.style.opacity = proj.z < 1 && track.target ? "1" : "0";
+  };
 
   // ---------- comets: a click on empty background sends one ----------
   const cometTex = glowTexture([
@@ -440,6 +575,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       const big = r() < 0.06;
       return {
         at: (t, o) => o.set(Math.cos(a0 + t * speed) * rad, Math.sin(a0 + t * speed) * rad, zj),
+        orbitSpeed: speed,
         scale: big ? 0.9 + r() * 0.8 : 0.18 + r() * 0.45,
         spin: new THREE.Vector3(r() * 0.6, r() * 0.6, r() * 0.3),
         phase: r() * 6,
@@ -466,7 +602,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       new THREE.LineBasicMaterial({ color: COOL, transparent: true, opacity: 0.12 }),
     );
     plane.add(ring);
-    const field = rockField(rocks, plane);
+    const field = rockField(rocks, plane, "Main-belt asteroid");
     const tracked = [3, 41, 88, 130, 160].filter((i) => i < n);
     let nextSight = 0;
     const tmp = new THREE.Vector3();
@@ -515,12 +651,13 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
           const x = ((((x0 + vx * t + span) % (2 * span)) + 2 * span) % (2 * span)) - span;
           o.set(x, y0 + vy * t * 0.3, z);
         },
+        drift: reduce ? 0 : Math.min(30, span / Math.abs(vx)),
         scale: (0.3 + r() * 0.8) * (-z / 50),
         spin: new THREE.Vector3(r() * 0.5, r() * 0.5, r() * 0.2),
         phase: r() * 6,
       };
     });
-    const field = rockField(rocks, root);
+    const field = rockField(rocks, root, "Moving source");
     const tracked = [0, 5, 11, 17, 23].filter((i) => i < n);
     let nextSight = 0;
     const tmp = new THREE.Vector3();
@@ -556,14 +693,14 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     sunLight.position.copy(center);
 
     const PLANETS = [
-      { a: 6, size: 0.45, color: "#b9b0a6", period: 8 },
-      { a: 9, size: 0.85, color: "#e8cf9a", period: 14 },
-      { a: 12.5, size: 0.9, color: "#6fa8ff", period: 20 },
-      { a: 16, size: 0.6, color: "#e0805a", period: 30 },
-      { a: 30, size: 2.6, color: "#d8b48a", period: 80 },
-      { a: 40, size: 2.2, color: "#e6d29c", period: 120, ring: true },
-      { a: 50, size: 1.5, color: "#9fe0e8", period: 180 },
-      { a: 59, size: 1.45, color: "#5f86ff", period: 240 },
+      { name: "Mercury", a: 6, size: 0.45, color: "#b9b0a6", period: 8 },
+      { name: "Venus", a: 9, size: 0.85, color: "#e8cf9a", period: 14 },
+      { name: "Earth", a: 12.5, size: 0.9, color: "#6fa8ff", period: 20 },
+      { name: "Mars", a: 16, size: 0.6, color: "#e0805a", period: 30 },
+      { name: "Jupiter", a: 30, size: 2.6, color: "#d8b48a", period: 80 },
+      { name: "Saturn", a: 40, size: 2.2, color: "#e6d29c", period: 120, ring: true },
+      { name: "Uranus", a: 50, size: 1.5, color: "#9fe0e8", period: 180 },
+      { name: "Neptune", a: 59, size: 1.45, color: "#5f86ff", period: 240 },
     ];
     const disposables: { dispose: () => void }[] = [];
     const orbitMat = new THREE.LineBasicMaterial({ color: COOL, transparent: true, opacity: 0.2 });
@@ -596,7 +733,15 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       }
       const phase = r() * Math.PI * 2;
       const speed = reduce ? 0 : (Math.PI * 2) / (p.period * 6);
-      return { mesh, at: (t: number, o: THREE.Vector3) => o.set(Math.cos(phase + t * speed) * p.a - off, Math.sin(phase + t * speed) * b, 0), size: p.size };
+      const at = (t: number, o: THREE.Vector3) => o.set(Math.cos(phase + t * speed) * p.a - off, Math.sin(phase + t * speed) * b, 0);
+      return {
+        mesh,
+        at,
+        size: p.size,
+        name: p.name,
+        path: (t: number, o: THREE.Vector3) => at(t, o).applyMatrix4(sys.matrixWorld),
+        span: speed > 0 ? (Math.PI * 2) / speed : 0,
+      };
     });
 
     // Main belt (rocks) between Mars and Jupiter; Kuiper belt (dust) beyond Neptune.
@@ -607,12 +752,13 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       const speed = reduce ? 0 : 0.016 * Math.pow(22 / rad, 1.5);
       return {
         at: (t, o) => o.set(Math.cos(a0 + t * speed) * rad, Math.sin(a0 + t * speed) * rad, zj),
+        orbitSpeed: speed,
         scale: 0.12 + r() * 0.3,
         spin: new THREE.Vector3(r(), r(), r() * 0.3),
         phase: r() * 6,
       };
     });
-    const field = rockField(rocks, sys);
+    const field = rockField(rocks, sys, "Main-belt asteroid");
     const kMat = starMaterial(dpr, reduce ? 0 : 0.35);
     disposables.push(kMat);
     const kp: number[] = [];
@@ -651,7 +797,12 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       },
       pickables: () => {
         sys.updateWorldMatrix(true, true);
-        return [...planets.map((p) => ({ pos: p.mesh.getWorldPosition(new THREE.Vector3()), size: p.size * 1.2 })), ...field.worldPositions()];
+        return [
+          ...planets.map(
+            (p): Pickable => ({ pos: p.mesh.getWorldPosition(new THREE.Vector3()), size: p.size * 1.2, path: p.path, span: p.span, closed: true, label: p.name }),
+          ),
+          ...field.worldPositions(),
+        ];
       },
       dispose() {
         field.dispose();
@@ -664,6 +815,7 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
   // ---------- input and the frame loop ----------
   let time = 0;
   let built: Built | null = null;
+  let hovered: Pickable | null = null;
   let variant: BackdropVariant = initial;
   const pointer = { x: -1, y: -1, active: false, lean: 0, tilt: 0, leanT: 0, tiltT: 0 };
   const scroll = { y: window.scrollY, ty: window.scrollY };
@@ -675,21 +827,22 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     }
     sightings.length = 0;
     reticle.target = null;
+    endTrack();
+    track.shown = 0;
     built = v === "belt" ? buildBelt() : v === "field" ? buildField() : buildOrbits();
     world.add(built.root);
   };
 
-  const proj = new THREE.Vector3();
-  const pickNearest = () => {
-    if (!built || !pointer.active) return null;
-    let best: { pos: THREE.Vector3; size: number } | null = null;
+  const pickNearest = (x = pointer.x, y = pointer.y, force = false): Pickable | null => {
+    if (!built || (!pointer.active && !force)) return null;
+    let best: Pickable | null = null;
     let bestD = small ? 60 : 80;
     for (const c of built.pickables()) {
       proj.copy(c.pos).project(camera);
       if (proj.z > 1 || proj.z < -1) continue;
       const sx = (proj.x * 0.5 + 0.5) * w;
       const sy = (-proj.y * 0.5 + 0.5) * h;
-      const d = Math.hypot(sx - pointer.x, sy - pointer.y);
+      const d = Math.hypot(sx - x, sy - y);
       if (d < bestD) {
         bestD = d;
         best = c;
@@ -710,8 +863,30 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     scroll.y += (scroll.ty - scroll.y) * 0.1;
     const sp = Math.min(4, scroll.y / h);
 
+    // While tracking, the view eases in and turns a little toward the object.
+    let yawT = 0;
+    let pitchT = 0;
+    if (track.target) {
+      track.target.path(time, trackTmp);
+      proj.copy(trackTmp).project(camera);
+      if (proj.z < 1) {
+        yawT = track.yaw - proj.x * 0.05;
+        pitchT = track.pitch + proj.y * 0.035;
+      }
+    }
+    const ease = Math.min(1, dt * 2.5);
+    track.yaw += (Math.max(-0.25, Math.min(0.25, yawT)) - track.yaw) * ease;
+    track.pitch += (Math.max(-0.18, Math.min(0.18, pitchT)) - track.pitch) * ease;
+    track.zoom += ((track.target ? 1 : 0) - track.zoom) * ease;
+    const baseFov = small ? 70 : 55;
+    const fov = baseFov * (1 - 0.18 * track.zoom);
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+
     // Pointer turns the view; scrolling turns the scene and flies a little way in.
-    camera.rotation.set(-pointer.tilt * 0.06, -pointer.lean * 0.1, 0);
+    camera.rotation.set(-pointer.tilt * 0.06 + track.pitch, -pointer.lean * 0.1 + track.yaw, 0);
     camera.position.set(0, 0, -sp * 5);
     world.rotation.y = sp * 0.07 + (reduce ? 0 : time * 0.004);
     stars.rotation.y = sp * 0.03 + (reduce ? 0 : time * 0.002);
@@ -722,21 +897,34 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     drawSightings();
     drawComets();
 
-    // Reticle: ease toward the nearest object, keep a constant size on screen.
-    const hit = pickNearest();
-    if (hit) {
+    // Reticle: ease toward the nearest object, keep a constant size on screen. While tracking it
+    // stays on the tracked object instead, snapped shut and gold.
+    const hit = track.target ? null : pickNearest();
+    hovered = hit;
+    if (track.target) {
+      reticle.target = track.target.path(time, new THREE.Vector3());
+      reticle.size = track.target.size;
+    } else if (hit) {
       reticle.target = hit.pos.clone();
       reticle.size = hit.size;
     }
-    const want = hit ? 1 : 0;
+    drawTrack(dt);
+    const lock = track.shown;
+    reticle.mat.color.copy(MINT).lerp(GOLD, lock);
+    const want = hit || track.target ? 1 : 0;
     reticle.shown += (want - reticle.shown) * 0.15;
     if (reticle.target && reticle.shown > 0.01) {
       const dist = reticle.target.distanceTo(camera.position);
-      reticle.obj.position.lerp(reticle.target, 0.35);
+      reticle.obj.position.lerp(reticle.target, track.target ? 0.6 : 0.35);
       reticle.obj.quaternion.copy(camera.quaternion);
-      reticle.spin += dt * 0.8;
-      reticle.obj.rotateZ(Math.sin(reticle.spin) * 0.08);
-      const s = Math.max(reticle.size * 2.2, dist * 0.022) * (1.25 - 0.25 * reticle.shown);
+      reticle.spin += dt * (0.8 + lock * 1.6);
+      // Locking on: a quarter turn and a snap inward, then a slow steady pulse.
+      const since = track.target ? time - track.t0 : 9;
+      const snap = since < 0.45 ? 1 - since / 0.45 : 0;
+      reticle.obj.rotateZ(Math.sin(reticle.spin) * 0.08 * (1 - lock) + (Math.PI / 4) * snap * snap);
+      const pulse = lock > 0.5 ? 1 + 0.06 * Math.sin(time * 5) : 1;
+      const s =
+        Math.max(reticle.size * 2.2, dist * 0.022) * (1.25 - 0.25 * reticle.shown) * (1 - 0.22 * lock + 0.9 * snap) * pulse;
       reticle.obj.scale.setScalar(s);
       reticle.mat.opacity = 0.85 * reticle.shown;
       reticle.obj.visible = true;
@@ -810,6 +998,18 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
     if (t?.closest?.(INTERACTIVE)) return;
     // Only on empty background, not on text someone is selecting.
     if (t && t !== document.body && t.closest("p,li,dd,dt,h1,h2,h3,h4,td,th,pre,code")) return;
+    // A click on the object the reticle is on (or, by touch, on one near the tap) tracks it.
+    const target = hovered ?? (e.pointerType === "mouse" ? null : pickNearest(e.clientX, e.clientY, true));
+    if (target) {
+      startTrack(target);
+      hovered = null;
+      if (!running) draw();
+      return;
+    }
+    if (track.target) {
+      endTrack();
+      return;
+    }
     launch((e.clientX / w) * 2 - 1, -(e.clientY / h) * 2 + 1);
   };
   const onScroll = () => {
@@ -863,6 +1063,9 @@ export function createBackdrop(canvas: HTMLCanvasElement, initial: BackdropVaria
       sightMat.dispose();
       reticle.geo.dispose();
       reticle.mat.dispose();
+      trackGeo.dispose();
+      trackMat.dispose();
+      label.remove();
       for (const n of nebulae) n.material.dispose();
       for (const g of rockGeos) g.dispose();
       rockMat.dispose();

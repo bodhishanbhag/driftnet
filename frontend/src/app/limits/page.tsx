@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { StudySkeleton } from "@/components/Skeletons";
 import { SimulatedBanner } from "@/components/SimulatedBanner";
 import { LimitsView } from "./LimitsView";
+import { LimitingMagnitudePanel } from "@/components/limits/LimitingMagnitude";
 
 export const metadata: Metadata = pageMeta(
   "Detection limits",
@@ -24,6 +25,8 @@ export default function LimitsPage() {
           without telling it where they were.
         </p>
       </header>
+      <LimitingMagnitudePanel />
+      <div style={{ marginTop: "var(--space-8)" }} />
       <SimulatedBanner>
         The objects on this page are simulated: planted on purpose to test our software. They are not real objects in the sky.
       </SimulatedBanner>
