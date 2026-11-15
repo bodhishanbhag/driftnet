@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
-  "pipeline_version": "0.1.0+git.78db86d",
-  "build_run_id": "gh-43626709896-1",
+  "pipeline_version": "0.1.0+git.2ace52d",
+  "build_run_id": "gh-43628455419-1",
   "object_id": "obj-sv-2025w242d-l2049-n008-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1568,52 +1568,52 @@
     "arc_hours": 63.74,
     "covariance": [
       [
-        2184.31,
-        4.41687,
-        9.95945,
-        -5.97103,
-        -100.536,
-        -141.807
+        2184.74,
+        4.44486,
+        10.0303,
+        -6.02379,
+        -98.6913,
+        -142.261
       ],
       [
-        4.41687,
-        0.0817625,
-        0.14457,
-        -0.154389,
-        -8.57267,
-        -8.77666
+        4.44486,
+        0.0809299,
+        0.138208,
+        -0.144697,
+        -8.2894,
+        -8.23678
       ],
       [
-        9.95945,
-        0.14457,
-        1.01735,
-        -1.19521,
-        -64.6905,
-        -105.055
+        10.0303,
+        0.138208,
+        0.983718,
+        -1.14976,
+        -63.7171,
+        -102.784
       ],
       [
-        -5.97103,
-        -0.154389,
-        -1.19521,
-        2.22242,
-        47.8992,
-        73.5775
+        -6.02379,
+        -0.144697,
+        -1.14976,
+        2.16423,
+        46.8759,
+        70.8331
       ],
       [
-        -100.536,
-        -8.57267,
-        -64.6905,
-        47.8992,
-        9825.56,
-        11667.7
+        -98.6913,
+        -8.2894,
+        -63.7171,
+        46.8759,
+        9823.86,
+        11631.4
       ],
       [
-        -141.807,
-        -8.77666,
-        -105.055,
-        73.5775,
-        11667.7,
-        19117.0
+        -142.261,
+        -8.23678,
+        -102.784,
+        70.8331,
+        11631.4,
+        18996.3
       ]
     ],
     "n_clones": 100,
@@ -1624,14 +1624,14 @@
       "lo": 2.76,
       "hi": 3.324
     },
-    "n_ranging_orbits": 409,
-    "reported_orbit": "The arc is too short to fix one orbit, so this is the most circular of the 409 sampled orbits that fit the detections; the clones show the range.",
+    "n_ranging_orbits": 406,
+    "reported_orbit": "The arc is too short to fix one orbit, so this is the most circular of the 406 sampled orbits that fit the detections; the clones show the range.",
     "check_30d": {
       "time_utc": "2025-07-15T16:03:04Z",
       "mjd": 60871.668807,
-      "ra_deg": 205.739412,
-      "dec_deg": -10.673225,
-      "sigma_major_arcsec": 773.5,
+      "ra_deg": 205.741191,
+      "dec_deg": -10.674197,
+      "sigma_major_arcsec": 763.3,
       "sigma_minor_arcsec": 131.5,
       "sigma_pa_deg": 118.3,
       "vmag_estimate": null
@@ -1639,7 +1639,7 @@
   },
   "known_object": {
     "checked": false,
-    "not_checked_reason": "The offline pipeline does not query JPL; the API checks JPL SBIdent and Horizons when this report is requested.",
+    "not_checked_reason": "JPL Horizons did not answer for 867 Kovacia (A917 DH), the closest known object (about 32″ away in JPL's quick search).",
     "matched": false,
     "catalogs_checked": [],
     "search_radius_arcsec": 15.0,
@@ -1648,8 +1648,8 @@
     "per_epoch": [],
     "nearest": null,
     "observer": null,
-    "query_utc": null,
-    "enrichment": "static",
+    "query_utc": "2026-11-14T20:37:25Z",
+    "enrichment": "pipeline",
     "jpl_links": null,
     "cross_checks": [],
     "agreeing_catalogs": 0,
@@ -1666,7 +1666,7 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.679,
+    "score": 0.678,
     "rank": 54,
     "n_ranked": 700,
     "reason_plain": "Moving at 64° to the ecliptic, steeper than most objects we have tracked",
@@ -1861,14 +1861,14 @@
   },
   "history": [
     {
-      "utc": "2026-11-14T19:00:44Z",
-      "run_id": "gh-43626709896-1",
+      "utc": "2026-11-14T20:14:30Z",
+      "run_id": "gh-43628455419-1",
       "change": "linked 20 detections over 3 visits from 2025-06-13 to 2025-06-15"
     }
   ],
   "provenance": {
-    "run_id": "gh-43626709896-1",
-    "generated_utc": "2026-11-14T19:00:44Z",
+    "run_id": "gh-43628455419-1",
+    "generated_utc": "2026-11-14T20:14:30Z",
     "parameters": {
       "detect_threshold_snr": 4.5,
       "aperture_radius_px": 1.5,
