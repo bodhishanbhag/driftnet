@@ -117,6 +117,7 @@ export function KnownObjectPanel({
 
   return (
     <Panel
+      defaultOpen
       id="known"
       title="Catalog check"
       kicker={

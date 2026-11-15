@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openPanels } from "./support/panels";
 import { installMockApi } from "./support/mockApi";
 
 test.beforeEach(async ({ page }) => {
@@ -7,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test("candidate list hides simulated objects until asked", async ({ page }) => {
   await page.goto("/detective/");
+  await openPanels(page);
   await expect(page.getByRole("link", { name: "(99999) Synthetic" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Moving object B in / })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Simulated object A in / })).toHaveCount(0);
@@ -19,6 +21,7 @@ test("candidate list hides simulated objects until asked", async ({ page }) => {
 
 test("classification filter narrows the list", async ({ page }) => {
   await page.goto("/detective/");
+  await openPanels(page);
   await page.getByRole("button", { name: /Unexplained/ }).click();
   await expect(page.getByRole("link", { name: "(99999) Synthetic" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /^Moving object B in / })).toBeVisible();
@@ -26,6 +29,7 @@ test("classification filter narrows the list", async ({ page }) => {
 
 test("evidence report for an unexplained candidate", async ({ page }) => {
   await page.goto("/detective/");
+  await openPanels(page);
   await page.getByRole("link", { name: /^Moving object B in / }).click();
   await expect(page).toHaveURL(/\/detective\/candidate\/\?id=syn-unmatched/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/^Moving object B in \w+$/);
@@ -45,18 +49,21 @@ test("evidence report for an unexplained candidate", async ({ page }) => {
 
 test("known object shows predicted positions", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-known");
+  await openPanels(page);
   await expect(page.getByText(/Yes: matches \(99999\) Synthetic/)).toBeVisible();
   await expect(page.getByText(/dashed white circles mark where JPL predicted/)).toBeVisible();
 });
 
 test("injected candidate is labeled SIMULATED everywhere", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-injected");
+  await openPanels(page);
   await expect(page.getByRole("note").filter({ hasText: "SIMULATED" }).first()).toBeVisible();
   await expect(page.getByText("What we planted vs. what we found")).toBeVisible();
 });
 
 test("stamp source opens the provenance drawer", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-known");
+  await openPanels(page);
   // Stamps mount when scrolled near.
   await page.getByRole("heading", { name: "Each sighting up close" }).scrollIntoViewIfNeeded();
   await page.getByRole("button", { name: "Source", exact: true }).first().click();
@@ -65,6 +72,7 @@ test("stamp source opens the provenance drawer", async ({ page }) => {
 
 test("unknown candidate shows not found", async ({ page }) => {
   await page.goto("/detective/candidate/?id=does-not-exist");
+  await openPanels(page);
   await expect(page.getByRole("alert").filter({ hasText: "couldn't find" })).toBeVisible();
 });
 
@@ -72,5 +80,6 @@ test("an unpublished candidate list reads as empty, not broken", async ({ page }
   await page.unrouteAll();
   await installMockApi(page, { failWith: 404 });
   await page.goto("/detective/");
+  await openPanels(page);
   await expect(page.getByRole("heading", { name: "No candidates published yet" })).toBeVisible();
 });

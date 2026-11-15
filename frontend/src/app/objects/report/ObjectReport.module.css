@@ -173,7 +173,8 @@
   width: max-content;
 }
 
-.toc a {
+.toc a,
+.toc button {
   display: inline-flex;
   align-items: center;
   min-height: 36px;
@@ -190,7 +191,8 @@
     background var(--dur) var(--ease-out);
 }
 
-.toc a:hover {
+.toc a:hover,
+.toc button:hover {
   color: var(--text);
   border-color: var(--accent);
 }
@@ -203,6 +205,13 @@
 
 .toc .top {
   border-style: dashed;
+}
+
+.toc button {
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
 }
 
 .sections {

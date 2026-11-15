@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openPanels } from "./support/panels";
 import { installMockApi } from "./support/mockApi";
 
 test.beforeEach(async ({ page }) => {
@@ -7,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test("report shows the model score beside the rule-based one, and saliency over the stamps", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-unmatched");
+  await openPanels(page);
   const quality = page.getByRole("region", { name: "Signal quality" });
   await quality.scrollIntoViewIfNeeded();
   await expect(quality.getByText("rule-based ranking")).toBeVisible();
@@ -25,6 +27,7 @@ test("report shows the model score beside the rule-based one, and saliency over 
 
 test("report explains why an object is unusual and gives orbit odds", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-unmatched");
+  await openPanels(page);
   const nav = page.getByRole("navigation", { name: "Report sections" });
   await expect(nav.getByRole("link", { name: "Unusual" })).toBeVisible();
   await expect(nav.getByRole("link", { name: "Orbit odds" })).toBeVisible();
@@ -42,6 +45,7 @@ test("report explains why an object is unusual and gives orbit odds", async ({ p
 
 test("reports without model data don't show the new sections", async ({ page }) => {
   await page.goto("/detective/candidate/?id=syn-known");
+  await openPanels(page);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByTestId("model-score")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "How unusual is it?" })).toHaveCount(0);
@@ -50,6 +54,7 @@ test("reports without model data don't show the new sections", async ({ page }) 
 
 test("detective list sorts by most unusual with reasons", async ({ page }) => {
   await page.goto("/detective/");
+  await openPanels(page);
   await expect(page.getByRole("link", { name: "(99999) Synthetic" })).toBeVisible();
   await page.getByLabel("Sort").selectOption("unusual");
   await expect(page).toHaveURL(/sort=unusual/);

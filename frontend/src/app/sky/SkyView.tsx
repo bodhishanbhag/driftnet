@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import { EmptyState, ErrorState } from "@/components/DataState";
 import { StudySkeleton } from "@/components/Skeletons";
 import { Deferred } from "@/components/Deferred";
+import { Disclosure } from "@/components/Disclosure";
 import { WhenVisible } from "@/components/WhenVisible";
 import { unpackTile, type PackedTile } from "@/components/skyTile";
 import { DEPTH_RANGE, OBJECT_STEPS, SkyMap, type RaUnits, type SkyColorBy, type SkyTile, depthColor, hasSourcedRegion } from "@/components/SkyMap";
@@ -174,15 +175,13 @@ export function SkyView({
           <h2 className={styles.explainerTitle}>How to read this map</h2>
           {view === "globe" ? (
             <p>
-              This is the <strong>whole sky</strong> as a globe, seen from outside. Each faint dot is a patch we searched; each{" "}
-              <strong>green beacon</strong> is a patch where something moved, with a taller pillar for more objects. The dashed gold ring is
-              the <strong>ecliptic</strong>, where the planets travel, and the band of light is the <strong>Milky Way</strong>.
+              The <strong>whole sky</strong> as a globe. Faint dots: patches we searched. <strong>Green beacons</strong>: patches where
+              something moved. Gold ring: the <strong>ecliptic</strong>, where planets travel.
             </p>
           ) : (
             <p>
-              This is a map of the <strong>whole sky</strong>, like a globe unrolled flat. <strong>Left–right</strong> goes around the sky
-              (right ascension, 0–360°); <strong>up–down</strong> is north–south (declination, +90° at the top, −90° at the bottom). Each
-              dot is a patch we searched; the rest of the oval is sky we haven&apos;t searched yet.
+              The <strong>whole sky</strong>, unrolled flat. Each dot is a patch we searched; the rest of the oval we haven&apos;t searched
+              yet.
             </p>
           )}
         </div>
@@ -344,10 +343,10 @@ export function SkyView({
 
       <section className={styles.section} aria-labelledby="tiles-title">
         <h2 id="tiles-title">Patches of sky searched</h2>
+        <Disclosure summary="See every patch as a table" hint={`${rows.length.toLocaleString("en-US")} patches`}>
         <p className={styles.intro}>
-          Each patch is one {survey.tile_size_deg}° × {survey.tile_size_deg}° tile of the map. The home page counts the same patches.
-          The depth (m₅₀) is the magnitude at which we find half of the simulated objects we plant there; it stays blank until that test has
-          run on the tile.
+          Each patch is a {survey.tile_size_deg}° square of sky. &ldquo;Depth&rdquo; is how faint an object we can catch there (blank until
+          tested).
         </p>
         <WhenVisible minHeight={640} margin="600px">
         <div className={styles.tableWrap}>
@@ -419,6 +418,7 @@ export function SkyView({
           </p>
         )}
         </WhenVisible>
+        </Disclosure>
         <p className={styles.note}>
           {survey.description} Survey map generated {formatUtcDateTime(survey.generated_utc)}.
           {survey.last_run && (

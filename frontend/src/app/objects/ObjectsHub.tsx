@@ -22,25 +22,25 @@ const TABS: { id: HubView; label: string; href: string; purpose: string }[] = [
     id: "all",
     label: "All",
     href: "/objects/",
-    purpose: "Every moving object, with search and filters. Open one for its full report.",
+    purpose: "Every moving object. Search, filter, and open one for its report.",
   },
   {
     id: "leads",
     label: "Unexplained leads",
     href: "/objects/?view=leads",
-    purpose: "The objects no asteroid catalog can explain, ranked by the strength of the evidence, with what would confirm each one.",
+    purpose: "Objects no catalog can explain, strongest evidence first.",
   },
   {
     id: "known",
     label: "Known objects",
     href: "/objects/?class=known_object",
-    purpose: "Objects identified as catalogued asteroids or comets, checked against several independent catalogs, with links to their orbit and ephemeris pages.",
+    purpose: "Objects matched to known asteroids or comets.",
   },
   {
     id: "patches",
     label: "Patches of sky",
     href: "/objects/?view=patches",
-    purpose: "The patches of sky we searched. Open one to blink its images and spot what moved yourself.",
+    purpose: "Open a patch of sky and blink its images to spot what moved.",
   },
 ];
 

@@ -91,7 +91,7 @@ export function ExplanationPanel({
 
   if (!writeup && !exp) {
     return (
-      <Panel id="explanation" title="In plain words" kicker="Explanation">
+      <Panel id="explanation" title="In plain words" kicker="Explanation" defaultOpen>
         <p className="muted">No written explanation is available for this candidate. Every measurement is in the sections below.</p>
       </Panel>
     );
@@ -100,7 +100,7 @@ export function ExplanationPanel({
   const ai = writeup?.source === "ai";
   const label = writeup ? (ai ? writeup.label_plain || generatorLabel("ai") : TEMPLATE_LABEL) : generatorLabel(exp!.generator);
   return (
-    <Panel id="explanation" title="In plain words" kicker="Explanation">
+    <Panel id="explanation" title="In plain words" kicker="Explanation" defaultOpen>
       <div
         className={styles.explanation}
         data-source={writeup ? writeup.source : "report"}

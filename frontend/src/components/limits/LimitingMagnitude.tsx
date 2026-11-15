@@ -2,6 +2,7 @@ import Link from "next/link";
 import { summarizeLimits, type LimitsStudy } from "@/lib/limits";
 import { staticInjectionStudy } from "@/lib/staticData";
 import { computeReach, type ReachStudy } from "@/lib/reach";
+import { Disclosure, DisclosureGroup } from "@/components/Disclosure";
 import { ReachFigure } from "./ReachFigure";
 import styles from "./LimitingMagnitude.module.css";
 
@@ -68,9 +69,8 @@ export function LimitingMagnitudeSummary({ heading = true }: { heading?: boolean
         </div>
       </dl>
       <p className={styles.verdict}>
-        Bigger numbers are fainter. Planet X is predicted to be fainter than SPHEREx can see in one image, and our current search can&apos;t
-        find it however long it runs. At best a brighter-than-expected planet could be reached by stacking images across the full
-        two-year survey (complete around mid-2027).{" "}
+        Bigger numbers are fainter. Planet X is predicted to be too faint and too slow for our search. Stacking images after the survey
+        ends (mid-2027) might reach it, if it&apos;s brighter than expected.{" "}
         <Link href="/limits/#limiting-magnitude">Why, in numbers</Link>
       </p>
     </div>
@@ -89,8 +89,8 @@ export function LimitingMagnitudePanel() {
       <p className="eyebrow">Limiting magnitude</p>
       <h2 id="limiting-magnitude-heading">How faint can SPHEREx see, and could it find Planet X?</h2>
       <p className={styles.intro}>
-        The limiting magnitude is the faintest object that can still be detected. Astronomers usually quote it at 5σ (signal five times
-        the noise). Bigger numbers are fainter: each step of 1 is about 2.5 times fainter, and 5 steps is 100 times.
+        The &ldquo;limiting magnitude&rdquo; is the faintest thing a telescope can detect. Bigger numbers mean fainter: each step is
+        about 2.5× fainter.
       </p>
 
       <div className={styles.tableWrap} role="region" aria-label="Limiting magnitudes" tabIndex={0}>
@@ -139,44 +139,51 @@ export function LimitingMagnitudePanel() {
         <>
           <h3 className={styles.sub}>How far out can we see? (3D)</h3>
           <p className={styles.intro}>
-            Two things limit a search: brightness and motion. Each green ring is how far out a body of that size stays brighter than the
-            limit. The gold sphere is how far out things still move fast enough for our 1–2 day linking to catch them. The predicted
-            Planet X zone (red) lies beyond both. Switch to the full survey to see how far deeper data pushes the rings.
+            Green rings: how far out we can see each size of object. Gold sphere: how far out things move fast enough for us to notice.
+            Red: where Planet X is predicted. It&apos;s beyond both.
           </p>
           <ReachFigure reach={reach} />
         </>
       )}
 
-      <h3 className={styles.sub}>So how long would it take?</h3>
-      <ul className={styles.points}>
-        <li>
-          <strong>With our current search: not possible at any wait.</strong> Planet X is predicted about 2–5 magnitudes (10–100 times)
-          fainter than our m₅₀, and at 300–1,000 AU it drifts only 0.01–0.05″ per hour, at most about one 6.2″ SPHEREx pixel a week. Linking images
-          over 1–2 days, it looks like a fixed star.
-        </li>
-        <li>
-          <strong>With all of SPHEREx&apos;s data: still short in any single image.</strong> One visit reaches about AB 18.5–19 and the
-          full two-year survey about AB 19.5 per channel. That is 0.5–3.5 magnitudes brighter than the predictions, so only a
-          Planet X that is closer or larger than expected (roughly AB 19 or brighter) would show up in a single image.
-        </li>
-        <li>
-          <strong>The only realistic route is shift-and-stack, after mid-2027.</strong> SPHEREx sees each patch of sky about every six
-          months. Adding together every exposure of a patch along millions of trial orbits, across many spectral channels and all four
-          passes (roughly 70 exposures), could in principle gain about 2 magnitudes, to around AB 21. That is our own rough estimate,
-          not a measured result: it ignores crowding by faint stars and galaxies and methane absorption, which would make the planet
-          fainter at many SPHEREx wavelengths. It would be a months-long computing project after the survey ends, not a change to this site.
-        </li>
-        <li>
-          <strong>What we can honestly say today:</strong> in the patches we searched, we would have caught most asteroid-speed
-          objects brighter than our m₅₀. We can&apos;t yet rule out a slow, distant planet at any brightness.
-        </li>
-      </ul>
-      <p className={styles.cite}>
-        Sources: SPHEREx single-visit and full-survey 5σ sensitivities from the SPHEREx team (Crill et al. 2025, arXiv:2505.24856;
-        Doré et al. 2018, arXiv:1805.05489). Planet Nine brightness about V 21–22 from Brown &amp; Batygin 2021 (arXiv:2108.09868);
-        optical surveys already exclude much of its predicted path brighter than V ≈ 21 (Brown, Holman &amp; Batygin 2024). Our m₅₀ and
-        the Neptune-sized model come from the injection study below.
+      <h3 className={styles.sub}>So could we find Planet X?</h3>
+      <p className={styles.intro}>
+        <strong>Short answer: not with today&apos;s data.</strong> Tap each point for the reasoning.
       </p>
+      <DisclosureGroup>
+        <Disclosure summary="With our current search: no">
+          <p>
+            Planet X is predicted to be 10–100 times fainter than what we can catch. It also moves very slowly (at most one SPHEREx pixel
+            a week), so over the 1–2 days we compare, it looks like a still star.
+          </p>
+        </Disclosure>
+        <Disclosure summary="With all of SPHEREx's data: probably not in a single image">
+          <p>
+            One image reaches about AB 18.5–19, and the full two-year survey about AB 19.5. Planet X is predicted at AB 20–23, so only a
+            closer or bigger-than-expected planet would show up.
+          </p>
+        </Disclosure>
+        <Disclosure summary="The best chance: stacking images after mid-2027">
+          <p>
+            Adding up all ~70 images of a patch along millions of possible paths could reach about AB 21. That&apos;s our rough estimate,
+            not a measurement, and it would be a months-long computing project after the survey ends.
+          </p>
+        </Disclosure>
+        <Disclosure summary="What we can honestly say today">
+          <p>
+            In the patches we searched, we&apos;d have caught most asteroid-speed objects brighter than our limit. We can&apos;t yet rule out
+            a slow, distant planet at any brightness.
+          </p>
+        </Disclosure>
+        <Disclosure summary="Sources">
+          <p className={styles.cite}>
+            SPHEREx single-visit and full-survey 5σ sensitivities from the SPHEREx team (Crill et al. 2025, arXiv:2505.24856; Doré et
+            al. 2018, arXiv:1805.05489). Planet Nine brightness about V 21–22 from Brown &amp; Batygin 2021 (arXiv:2108.09868); optical
+            surveys already exclude much of its predicted path brighter than V ≈ 21 (Brown, Holman &amp; Batygin 2024). Our m₅₀ and the
+            Neptune-sized model come from the injection study below.
+          </p>
+        </Disclosure>
+      </DisclosureGroup>
     </section>
   );
 }

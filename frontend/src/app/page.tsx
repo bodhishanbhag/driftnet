@@ -5,7 +5,7 @@ import { HomeSky } from "@/components/home/HomeSky";
 import { HeroBlink } from "@/components/home/HeroBlink";
 import { heroBlink } from "@/lib/heroBlink";
 import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
-import { HowToUse } from "@/components/home/HowToUse";
+import { Disclosure, DisclosureGroup } from "@/components/Disclosure";
 import { TourButton } from "@/components/tour/Tour";
 import { SpectralStrip } from "@/components/SpectralStrip";
 import { formatUtcDate } from "@/lib/format";
@@ -15,48 +15,27 @@ import styles from "./page.module.css";
 /** The whole sky: 4π steradians, in square degrees. */
 const SKY_DEG2 = 41252.96;
 
-const CAPABILITIES = [
+/** How it works, in five plain steps. Titles are always visible; the detail is one tap away. */
+const STEPS = [
   {
-    kicker: "Find",
-    title: "Moving-object detection in real survey data",
-    body: "We process SPHEREx Level 2 images from NASA's public archive, measure every source in every exposure, discard what stays fixed to the sky, and link the sightings that move consistently into tracks.",
+    title: "Get the images",
+    body: "We download SPHEREx images of each patch of sky from NASA's public archive, with the time and wavelength of each one.",
   },
   {
-    kicker: "Verify",
-    title: "Every track checked against known objects",
-    body: "Each track is compared with several independent catalogs of known asteroids and comets (NASA JPL and IMCCE SkyBoT) for the exact time and place of each image. Matches are labelled as known; anything left over is reported as unexplained, never as a discovery.",
+    title: "Find every dot",
+    body: "We measure every point of light in every image, and ignore pixels the telescope marks as faulty.",
   },
   {
-    kicker: "Explain",
-    title: "Evidence you can audit",
-    body: "Every object gets a report with its measured positions, motion fit, signal quality, the ways it could be wrong, and a link from every image to the exact archive file it came from. AI-written summaries are checked number by number against the measurements.",
-  },
-];
-
-const PIPELINE = [
-  {
-    title: "Ingest",
-    body: "SPHEREx Level 2 images for each patch of sky, fetched from NASA/IPAC's public SPHEREx archive with their observation IDs, times and wavelengths.",
+    title: "Throw out what stays still",
+    body: "Stars and galaxies sit in the same place every time. We set those aside. What's left might be moving.",
   },
   {
-    title: "Detect",
-    body: "Sources are measured in every exposure. Pixels the instrument flags as unreliable are tracked, so a detector glitch can't pass as a sighting.",
+    title: "Connect the dots",
+    body: "Dots that move in a steady line across several images become a track. We measure its speed and direction.",
   },
   {
-    title: "Remove the fixed sky",
-    body: "Stars and galaxies sit in the same place on every date. Sources that stay put are set aside; what's left are sightings that might be moving.",
-  },
-  {
-    title: "Link and fit",
-    body: "Sightings from different exposures are linked into tracks that move at a steady rate and direction, and the motion is fitted, including the shift from SPHEREx's own movement around Earth.",
-  },
-  {
-    title: "Check against the catalogs",
-    body: "The pipeline asks JPL's small-body services (SBIdent, then Horizons) which known asteroids and comets were at each position at each time, as seen from SPHEREx. IMCCE's SkyBoT is then asked the same question independently. Matches are labelled known; tracks no catalog can explain stay Unexplained, and every object is re-checked on a rolling schedule.",
-  },
-  {
-    title: "Score and publish",
-    body: "Vetting checks and a rule-based score rank each track. Simulated objects planted in real images measure how faint and how slow an object we can actually recover.",
+    title: "Check if it's already known",
+    body: "We ask two independent catalogs of known asteroids and comets (NASA JPL and France's IMCCE SkyBoT) what was there at that moment. If neither knows it, we call it unexplained, not new. Every object is re-checked regularly.",
   },
 ];
 
@@ -97,9 +76,8 @@ export default function LandingPage() {
             <span className={styles.glow}>in the infrared sky.</span>
           </h1>
           <p className={styles.lede}>
-            Driftnet searches real images from NASA&apos;s SPHEREx space telescope for objects that move between
-            observations: asteroids, comets and distant bodies in the outer solar system. Every one is tracked, checked against
-            several independent catalogs of known objects, and published with the evidence for and against it.
+            We search real images from NASA&apos;s SPHEREx telescope for things that move: asteroids, comets and distant worlds. Each one is
+            checked against catalogs of known objects, with the evidence shown.
           </p>
           <div className={styles.actions}>
             <Link href="/objects/" className="button button-primary">
@@ -123,7 +101,11 @@ export default function LandingPage() {
               ))}
             </dl>
           )}
-          <LimitingMagnitudeSummary />
+          <div className={styles.planetX}>
+            <Disclosure summary="Can this find Planet X?" hint="Not yet: tap for why">
+              <LimitingMagnitudeSummary heading={false} />
+            </Disclosure>
+          </div>
           {survey && <p className={styles.asOf}>Survey data as of {formatUtcDate(survey.generated_utc)}.</p>}
         </div>
       </section>
@@ -135,13 +117,11 @@ export default function LandingPage() {
               <p className="eyebrow">See it move</p>
               <h2 id="see-it-heading">Two real SPHEREx images, hours apart</h2>
               <p>
-                Stars stay put. The circled dot doesn&apos;t: it moved between two visits. Its speed suggests a main-belt asteroid, and it
-                hasn&apos;t been matched to a known object yet. Every object on this site was found this
-                way, by comparing SPHEREx images of the same patch of sky taken at different times.
+                The stars stay put. The circled dot moves. That&apos;s how every object on this site was found: by comparing pictures of the
+                same patch of sky taken at different times.
               </p>
               <p>
-                <Link href="/look/">Look anywhere</Link>: name any star, or pick one of the challenge&apos;s five example targets, and
-                watch every SPHEREx image of it, live from NASA&apos;s archive.
+                Want to try your own? <Link href="/look/">Look anywhere</Link> in the sky.
               </p>
             </div>
             <div className={styles.seeItPlate}>
@@ -152,63 +132,38 @@ export default function LandingPage() {
       )}
 
       <div className="container">
-        <HowToUse />
-      </div>
-
-      <div className="container">
-        <section className={styles.what} aria-labelledby="what-heading">
-          <div className={styles.whatHead}>
-            <p className="eyebrow">What it does</p>
-            <h2 id="what-heading">A transparent search for moving objects, built on real data</h2>
-            <p className={styles.sectionLede}>
-              Moving objects reveal themselves by shifting against the fixed stars. SPHEREx photographs each part of the sky again and
-              again, in 102 infrared colors, which makes its archive a natural place to look. We turn those images into a searchable,
-              checkable record of what moved.
-            </p>
-          </div>
-          <ul className={styles.capabilities}>
-            {CAPABILITIES.map((c) => (
-              <li key={c.kicker} className={`card ${styles.capability}`}>
-                <span className="eyebrow">{c.kicker}</span>
-                <h3>{c.title}</h3>
-                <p>{c.body}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-
         <section id="how" className={`section ${styles.how}`} aria-labelledby="how-heading">
           <div className={styles.howGrid}>
             <div className={styles.howIntro}>
               <p className="eyebrow">How it works</p>
               <h2 id="how-heading">From raw images to an evidence report</h2>
               <p className={styles.sectionLede}>
-                A Python pipeline in GitHub Actions searches new patches of sky several times a day and checks every new track against
-                independent asteroid catalogs before it is published. Every object is re-checked on a rolling schedule, so labels can
-                change as catalogs grow.
+                Our code runs several times a day, searching new patches of sky automatically. Tap a step to learn more, or read the{" "}
+                <Link href="/about/">full method</Link>.
               </p>
               <div className={`card ${styles.instrument}`}>
                 <p className={`mono ${styles.instrumentLabel}`}>What SPHEREx sees</p>
                 <SpectralStrip />
-                <p className={styles.instrumentNote}>
-                  0.75 to 5 µm, invisible to our eyes. Each detector&apos;s filter changes color from edge to edge, so one object can look
-                  brighter or fainter from one visit to the next.
-                </p>
+                <p className={styles.instrumentNote}>Infrared light from 0.75 to 5 µm, invisible to our eyes, in 102 colors.</p>
               </div>
             </div>
-            <ol className={styles.pipeline}>
-              {PIPELINE.map((s, i) => (
-                <li key={s.title} className={styles.stage}>
-                  <span className={`mono ${styles.stageNo}`} aria-hidden="true">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <h3>{s.title}</h3>
-                    <p>{s.body}</p>
-                  </div>
-                </li>
+            <DisclosureGroup className={styles.steps}>
+              {STEPS.map((s, i) => (
+                <Disclosure
+                  key={s.title}
+                  summary={
+                    <>
+                      <span className={`mono ${styles.stageNo}`} aria-hidden="true">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      {s.title}
+                    </>
+                  }
+                >
+                  <p>{s.body}</p>
+                </Disclosure>
               ))}
-            </ol>
+            </DisclosureGroup>
           </div>
         </section>
 
@@ -224,38 +179,32 @@ export default function LandingPage() {
           <div className={styles.modes}>
             <Link href="/objects/?view=leads" className={`card ${styles.mode}`}>
               <span className="eyebrow">Unexplained leads</span>
-              <h3>Not yet identified by any catalog</h3>
-              <p>
-                The objects the catalogs haven&apos;t matched to a known asteroid or comet (some are still being checked, some may be glitches), ranked by the strength of the evidence, each with a blink, the case for
-                and against, and where to point a telescope to confirm it.
-              </p>
+              <h3>Not matched to anything known</h3>
+              <p>Ranked by evidence, with where to point a telescope.</p>
               <span className={styles.modeCta}>See the leads</span>
             </Link>
             <Link href="/objects/?view=patches" className={`card ${styles.mode}`}>
               <span className="eyebrow">Patches of sky</span>
               <h3>Blink the sky</h3>
-              <p>Pick a patch of sky and flip between real SPHEREx images taken hours or days apart. Stars hold still; movers jump.</p>
+              <p>Flip between images taken hours apart. Stars hold still; movers jump.</p>
               <span className={styles.modeCta}>Start exploring</span>
             </Link>
             <Link href="/objects/" className={`card ${styles.mode}`}>
               <span className="eyebrow">Objects</span>
               <h3>Weigh the evidence</h3>
-              <p>
-                Every moving object in one searchable list. Each has one report: its images, positions, speed, signal quality, the catalog
-                check, the explanations we can and can&apos;t rule out, and, once fitted, its orbit and distance.
-              </p>
+              <p>Every moving object, each with a full report.</p>
               <span className={styles.modeCta}>Browse objects</span>
             </Link>
             <Link href="/sky/" className={`card ${styles.mode}`}>
               <span className="eyebrow">Sky map</span>
               <h3>Where we&apos;ve searched</h3>
-              <p>Every patch of sky we&apos;ve processed on one all-sky map, with the ecliptic and the Milky Way for reference.</p>
+              <p>Every patch we&apos;ve covered, on one map of the sky.</p>
               <span className={styles.modeCta}>Open the map</span>
             </Link>
             <Link href="/limits/" className={`card ${styles.mode}`}>
               <span className="eyebrow">Detection limits</span>
               <h3>What we could miss</h3>
-              <p>How faint and how slow an object we can recover, measured by planting simulated objects in real images.</p>
+              <p>How faint and how slow an object we can still catch.</p>
               <span className={styles.modeCta}>See the limits</span>
             </Link>
           </div>
@@ -278,13 +227,8 @@ export default function LandingPage() {
           <p className="eyebrow">Scientific integrity</p>
           <h2 id="integrity-heading">We&apos;re looking, not claiming.</h2>
           <p>
-            Scientists have proposed that an undiscovered planet, often called Planet X or Planet Nine, may orbit far beyond Neptune.
-            That question is why we built this, but we have not found it. When a moving object doesn&apos;t match anything known, it
-            could be an image artifact, a measurement error, or a real object no catalog lists yet. We publish the evidence and say
-            which explanations we can and can&apos;t rule out.
-          </p>
-          <p>
-            <Link href="/limits/">See where Planet X could still be hiding, and how we test ourselves</Link>
+            Planet X is why we built this, but we haven&apos;t found it. An object no catalog knows could be a glitch, a measuring error, or
+            something real that nobody has listed yet. We show the evidence either way.
           </p>
         </section>
       </div>

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openPanels } from "./support/panels";
 import { installMockApi } from "./support/mockApi";
 
 test.beforeEach(async ({ page }) => {
@@ -7,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test("object list links to each object", async ({ page }) => {
   await page.goto("/objects/");
+  await openPanels(page);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Every object we've tracked");
   await expect(page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "(99999) Synthetic" }) })).toContainText("Main asteroid belt");
   await page.getByRole("link", { name: "(99999) Synthetic" }).click();
@@ -16,6 +18,7 @@ test("object list links to each object", async ({ page }) => {
 
 test("object with an orbit: visits, 3D orbit with uncertainty, elements, JPL check, distance", async ({ page }) => {
   await page.goto("/objects/object/?id=obj-syn-known");
+  await openPanels(page);
   await expect(page.getByText(/Object ID\s*obj-syn-known/)).toBeVisible();
 
   const visits = page.getByRole("region", { name: "Tracked across visits" });
@@ -52,6 +55,7 @@ test("object with an orbit: visits, 3D orbit with uncertainty, elements, JPL che
 
 test("object without an orbit says why", async ({ page }) => {
   await page.goto("/objects/object/?id=obj-syn-unmatched");
+  await openPanels(page);
   const orbit = page.getByRole("region", { name: "Orbit" });
   await expect(orbit.getByText(/^No orbit yet\. Working out an orbit needs sightings spread over more nights/)).toBeVisible();
   await expect(orbit.locator("canvas")).toHaveCount(0);
@@ -61,5 +65,6 @@ test("object without an orbit says why", async ({ page }) => {
 
 test("unknown object shows not found", async ({ page }) => {
   await page.goto("/objects/object/?id=obj-nope");
+  await openPanels(page);
   await expect(page.getByRole("alert").filter({ hasText: "couldn't find" })).toBeVisible();
 });

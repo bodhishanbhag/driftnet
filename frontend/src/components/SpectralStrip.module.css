@@ -43,7 +43,8 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .strip {
+  /* Only the channels rise in; the detector labels stay put and fully legible. */
+  .channel {
     animation: rise 900ms var(--ease-out) both;
     transform-origin: bottom;
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Disclosure } from "@/components/Disclosure";
 import { useEffect, useMemo, useState } from "react";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
 import { EmptyState, ErrorState } from "@/components/DataState";
@@ -160,6 +161,8 @@ function LeadCard({ lead, rank }: { lead: Ranked; rank: number }) {
         </div>
       </div>
 
+      <div className={styles.dropdowns}>
+      <Disclosure summary="Is it real? The case for and against">
       <div className={styles.cases}>
         <section aria-label="Why it might be real">
           <h3 className={styles.caseFor}>Why it might be real</h3>
@@ -179,8 +182,10 @@ function LeadCard({ lead, rank }: { lead: Ranked; rank: number }) {
         </section>
       </div>
 
+      </Disclosure>
+
+      <Disclosure summary="How to confirm it with a telescope">
       <section className={styles.confirm} aria-label="What would confirm it">
-        <h3>What would confirm it</h3>
         <div className={styles.confirmGrid}>
           <div>
             {lead.prediction ? (
@@ -215,6 +220,8 @@ function LeadCard({ lead, rank }: { lead: Ranked; rank: number }) {
         </div>
         <FollowUpDownloads objectId={lead.object_id} candidateId={lead.candidate_id} headingLevel={4} />
       </section>
+      </Disclosure>
+      </div>
 
       <footer className={styles.links}>
         <Link href={objectHref(lead.object_id)}>Full report: evidence, orbit and distance</Link>

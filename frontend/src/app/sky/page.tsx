@@ -24,8 +24,7 @@ export default function SkyPage() {
         <PageGuide>See which parts of the sky we have searched for moving objects, and which we haven&apos;t yet.</PageGuide>
         <h1>Where we&apos;ve searched</h1>
         <p className="lede">
-          SPHEREx maps the whole sky. We search it patch by patch for things that move. Each marked tile is a patch we have searched; the
-          rest of the sky we haven&apos;t searched yet, so it can&apos;t tell us anything either way.
+          We search the sky one small patch at a time. Sky we haven&apos;t searched yet tells us nothing either way.
         </p>
       </header>
       {/* The Planet Nine region (hundreds of cells) and the empty patches' positions are left out of the HTML and arrive with the

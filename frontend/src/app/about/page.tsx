@@ -4,8 +4,8 @@ import { pageMeta } from "@/lib/meta";
 import Link from "next/link";
 import { ClassificationBadge } from "@/components/ClassificationBadge";
 import { CatalogMethod } from "@/components/catalogs/CatalogMethod";
-import { LimitingMagnitudeSummary } from "@/components/limits/LimitingMagnitude";
-import { GLOSSARY } from "@/components/Term";
+import { Disclosure, DisclosureGroup } from "@/components/Disclosure";
+import { GLOSSARY } from "@/lib/glossary";
 import { CLASSIFICATIONS, CLASSIFICATION_ORDER } from "@/lib/labels";
 import { blindSpeeds, summarizeLimits } from "@/lib/limits";
 import { staticInjectionStudy, staticSurvey } from "@/lib/staticData";
@@ -21,29 +21,29 @@ export const metadata: Metadata = pageMeta(
 const PIPELINE: { where: string; note: string; steps: { title: string; body: string }[] }[] = [
   {
     where: "GitHub Actions",
-    note: "Python pipeline (pipeline/), several runs a day, in parallel shards",
+    note: "Python, runs several times a day",
     steps: [
-      { title: "Fetch", body: "Find every SPHEREx Level 2 exposure covering a 0.3° patch in NASA/IPAC's archive (IRSA) and read just that region of each file." },
-      { title: "Clean and align", body: "Subtract the zodiacal-light model and background, mask the pixels SPHEREx flags as unreliable, and put every image on one grid." },
-      { title: "Detect", body: "Measure every source above signal-to-noise 4.5 in every exposure." },
-      { title: "Remove the fixed sky", body: "Drop sources that stay put across visits: stars and galaxies." },
-      { title: "Link and fit", body: "Link sightings across visits into tracks with one steady motion, including SPHEREx's own parallax. Three or more visits make a track; two make an unconfirmed pair." },
-      { title: "Vet and score", body: "Artifact checks (flagged pixels, shape, edges, static sources, brightness across wavelengths) and a rule-based score." },
-      { title: "Catalog check", body: "Ask JPL SBIdent which known bodies were near each visit, as seen from SPHEREx, and refine with Horizons; then ask IMCCE SkyBoT independently. Within 15″ at every visit is a match." },
-      { title: "Orbit and publish", body: "Fit a preliminary orbit and prediction for what the catalogs can't explain, then commit the JSON to the repository." },
+      { title: "Fetch", body: "Download every SPHEREx image of a small patch of sky (0.3° across) from NASA's archive." },
+      { title: "Clean and align", body: "Remove the background glow, hide faulty pixels, and line all the images up." },
+      { title: "Detect", body: "Find every dot that stands out clearly from the noise, in every image." },
+      { title: "Remove the fixed sky", body: "Set aside dots that never move: stars and galaxies." },
+      { title: "Link and fit", body: "Join dots that move in a steady line into a track. Three or more sightings make a track; two make an unconfirmed pair." },
+      { title: "Vet and score", body: "Check each track for signs of a glitch, then give it a score for ranking." },
+      { title: "Catalog check", body: "Ask two independent catalogs (NASA JPL and IMCCE SkyBoT) which known asteroids and comets were there. Close enough at every sighting counts as a match." },
+      { title: "Orbit and publish", body: "Estimate a rough orbit for anything unexplained, then publish the results." },
     ],
   },
   {
     where: "Cloudflare Worker",
-    note: "worker/, the /api the site reads",
+    note: "the data API",
     steps: [
-      { title: "Serve and re-check", body: "Serves the published data and re-checks every object against the catalogs on a rolling schedule: unexplained ones about daily, known ones about monthly." },
+      { title: "Serve and re-check", body: "Serve the data to this site and re-check objects regularly: unexplained ones about daily, known ones about monthly." },
     ],
   },
   {
     where: "Vercel",
-    note: "frontend/, this Next.js site",
-    steps: [{ title: "Show the evidence", body: "Blinks, evidence reports, leads, limits and the sky map, built from the same data." }],
+    note: "the website",
+    steps: [{ title: "Show the evidence", body: "This website: blinks, reports, leads, limits and the sky map." }],
   },
 ];
 
@@ -182,186 +182,149 @@ function Limitations() {
 export default function AboutPage() {
   return (
     <div className={`container ${styles.page}`}>
-      <PageGuide>How the search works, where the data comes from, its honest limits, and who built it.</PageGuide>
+      <PageGuide>How the search works, where the data comes from, its limits, and who built it.</PageGuide>
       <h1>How it works</h1>
       <p className={styles.lede}>
-        SPHEREx is a NASA space telescope that maps the entire sky in 102 infrared colors, from 0.75 to 5 microns. It revisits each part
-        of the sky, so objects that move between visits, like asteroids, comets and distant solar system bodies, show up as dots that
-        change position. We search its public images for them, check each against independent catalogs of known objects, and publish the evidence.
+        SPHEREx is a NASA space telescope that photographs the whole sky in infrared, again and again. Anything that moves between
+        photos, like an asteroid or comet, shows up as a dot that changes place. We find those dots, check them against catalogs of known
+        objects, and show the evidence. We don&apos;t claim to have found Planet X.
       </p>
 
       <section aria-labelledby="audience">
         <h2 id="audience">Who this is for</h2>
-        <ul>
+        <ul className={styles.audience}>
           <li>
-            <strong>Anyone curious about the sky.</strong> Blink two real SPHEREx images and watch something move, the way Clyde Tombaugh
-            found Pluto. Every report has a plain-language write-up you can read in 10 languages or listen to.
+            <strong>Curious people:</strong> watch real objects move, with plain-language write-ups in 10 languages.
           </li>
           <li>
-            <strong>Teachers and students.</strong> Each object shows the whole method from raw images to orbit, with the uncertainties
-            and what could make it wrong, so it works as a worked example of how astronomers test a claim.
+            <strong>Teachers and students:</strong> every object is a worked example of how astronomers test a claim.
           </li>
           <li>
-            <strong>Amateur and professional observers.</strong> Unexplained leads come with approximate predicted positions for the next two weeks
-            and downloads in the formats the Minor Planet Center uses (ADES and MPC 80-column), so anyone with a telescope can follow up.
+            <strong>Telescope owners:</strong> unexplained leads come with sky positions and standard follow-up files.
           </li>
           <li>
-            <strong>Survey scientists.</strong> The detection limits are measured by planting thousands of fake objects into real images,
-            and the code, data and per-run ledger are open, so the results can be checked and reused.
+            <strong>Scientists:</strong> measured detection limits, plus open code and data.
           </li>
         </ul>
       </section>
 
-      <section aria-labelledby="pipeline">
-        <h2 id="pipeline">The pipeline</h2>
-        <div className={styles.flow}>
-          {PIPELINE.map((stage, si) => (
-            <div key={stage.where} className={styles.stage}>
-              <p className={styles.where}>
-                <span className="mono">{stage.where}</span> · {stage.note}
-              </p>
-              <ol className={styles.steps} start={PIPELINE.slice(0, si).reduce((n, s) => n + s.steps.length, 1)}>
-                {stage.steps.map((m, i) => (
-                  <li key={m.title}>
-                    <h3>
-                      <span className={`mono ${styles.stepNo}`} aria-hidden="true">
-                        {String(PIPELINE.slice(0, si).reduce((n, s) => n + s.steps.length, 1) + i).padStart(2, "0")}
-                      </span>
-                      {m.title}
-                    </h3>
-                    <p>{m.body}</p>
-                  </li>
-                ))}
-              </ol>
+      <section aria-labelledby="details">
+        <h2 id="details">The details</h2>
+        <p className="muted">Tap any topic to open it.</p>
+        <DisclosureGroup>
+          <Disclosure id="pipeline" summary="The search, step by step" hint={`${PIPELINE.reduce((n, s) => n + s.steps.length, 0)} steps`}>
+            <div className={styles.flow}>
+              {PIPELINE.map((stage, si) => (
+                <div key={stage.where} className={styles.stage}>
+                  <p className={styles.where}>
+                    <span className="mono">{stage.where}</span> · {stage.note}
+                  </p>
+                  <ol className={styles.steps} start={PIPELINE.slice(0, si).reduce((n, s) => n + s.steps.length, 1)}>
+                    {stage.steps.map((m, i) => (
+                      <li key={m.title}>
+                        <h3>
+                          <span className={`mono ${styles.stepNo}`} aria-hidden="true">
+                            {String(PIPELINE.slice(0, si).reduce((n, s) => n + s.steps.length, 1) + i).padStart(2, "0")}
+                          </span>
+                          {m.title}
+                        </h3>
+                        <p>{m.body}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </Disclosure>
 
-      <section aria-labelledby="catalogs">
-        <h2 id="catalogs">How we identify known objects</h2>
-        <CatalogMethod />
-      </section>
+          <Disclosure id="catalogs" summary="How we tell if an object is already known">
+            <CatalogMethod />
+          </Disclosure>
 
-      <section aria-labelledby="limiting-mag">
-        <h2 id="limiting-mag">Limiting magnitude, and can SPHEREx find Planet X?</h2>
-        <p>
-          The limiting magnitude is the faintest object that can still be detected (bigger numbers are fainter). It decides whether
-          Planet X is in reach of this data at all.
-        </p>
-        <LimitingMagnitudeSummary heading={false} />
-      </section>
+          <Disclosure id="labels" summary="What the labels mean" hint={`${CLASSIFICATION_ORDER.length} labels`}>
+            <dl className={styles.labels}>
+              {CLASSIFICATION_ORDER.map((c) => (
+                <div key={c}>
+                  <dt>
+                    <ClassificationBadge value={c} />
+                  </dt>
+                  <dd>{CLASSIFICATIONS[c].plain}</dd>
+                </div>
+              ))}
+            </dl>
+          </Disclosure>
 
-      <section aria-labelledby="limitations">
-        <h2 id="limitations">Honest limitations</h2>
-        <p>Measured by planting simulated objects in real SPHEREx images and running the same pipeline on them.</p>
-        <Limitations />
-        <p>
-          <Link href="/limits/">The full detection-limits study</Link>
-        </p>
-      </section>
+          <Disclosure id="limitations" summary="What we can't do (yet)">
+            <p>
+              We test ourselves by hiding fake moving objects in real images and counting how many we find. Fake objects are always
+              labeled SIMULATED.
+            </p>
+            <Limitations />
+            <p>
+              <Link href="/limits/">Full detection limits, and whether SPHEREx could find Planet X</Link>
+            </p>
+          </Disclosure>
 
-      <section aria-labelledby="advisor">
-        <h2 id="advisor">Expert review</h2>
-        <p>
-          We walked through the method, the detection limits and the Planet X question with{" "}
-          <strong>Dr. Tavarez-Brown</strong> (PhD, Astronomy, University of Washington; BA/MA, Physics, Hunter College of CUNY; BA,
-          Political Science, Yale). Her questions about how faint SPHEREx can see, and how long a Planet X search would take with this
-          data, are why the limiting magnitude is now stated on the home, about and limits pages. Any remaining errors are ours.
-        </p>
-      </section>
+          <Disclosure id="wavelength" summary="Why an object's brightness changes between photos">
+            <p>
+              Each SPHEREx detector sees a slightly different infrared color at each edge. On different visits, the same object lands on
+              a different spot, so it&apos;s photographed in a different color and can look brighter or fainter. That&apos;s why we judge
+              motion by position, not brightness.
+            </p>
+          </Disclosure>
 
-      <section aria-labelledby="sources">
-        <h2 id="sources">Data sources and citations</h2>
-        <ul className={styles.sources}>
-          {SOURCES.map((src) => (
-            <li key={src.name}>
-              <a href={src.href} target="_blank" rel="noopener noreferrer">
-                {src.name}
-              </a>
-              <span>{src.use}</span>
-              {src.cite && <span className={styles.cite}>{src.cite}</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
+          <Disclosure id="ai-use" summary="How we use AI">
+            <p>
+              <strong>Finding and checking objects is ordinary code, not AI.</strong> AI only writes the plain-language summaries, answers
+              questions, and powers search.
+            </p>
+            <ul>
+              <li>
+                Summaries and answers come from Meta&apos;s Llama 4 Scout (on Cloudflare Workers AI). It only sees an object&apos;s
+                measurements.
+              </li>
+              <li>
+                Before anything is shown, the site checks every number against the measurements and blocks any claim that an object is new.
+                If a check fails, a fixed template is shown instead.
+              </li>
+              <li>Translations (m2m100), read-aloud (MeloTTS) and voice questions (Whisper) get the same number check.</li>
+              <li>We used Claude (Anthropic) to help write and review code. The team chose the methods and checked the results.</li>
+            </ul>
+          </Disclosure>
 
-      <section aria-labelledby="wavelength">
-        <h2 id="wavelength">Why brightness can change between dates</h2>
-        <p>
-          Each SPHEREx detector sits behind a filter whose color changes from one edge to the other. On different visits,
-          the same star usually lands on a different part of the detector, so it is photographed at a different infrared
-          wavelength. Stars are brighter at some wavelengths than others. When two images were taken at different
-          wavelengths, we say so on the image, and we judge motion by position, not brightness.
-        </p>
-      </section>
+          <Disclosure id="sources" summary="Data sources and citations" hint={`${SOURCES.length} sources`}>
+            <ul className={styles.sources}>
+              {SOURCES.map((src) => (
+                <li key={src.name}>
+                  <a href={src.href} target="_blank" rel="noopener noreferrer">
+                    {src.name}
+                  </a>
+                  <span>{src.use}</span>
+                  {src.cite && <span className={styles.cite}>{src.cite}</span>}
+                </li>
+              ))}
+            </ul>
+          </Disclosure>
 
-      <section aria-labelledby="labels">
-        <h2 id="labels">What the labels mean</h2>
-        <p>Our pipeline sorts every moving source into one of five groups. We show its label exactly as the pipeline assigned it.</p>
-        <dl className={styles.labels}>
-          {CLASSIFICATION_ORDER.map((c) => (
-            <div key={c}>
-              <dt>
-                <ClassificationBadge value={c} />
-              </dt>
-              <dd>{CLASSIFICATIONS[c].plain}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+          <Disclosure id="glossary" summary="Glossary" hint={`${Object.keys(GLOSSARY).length} terms`}>
+            <dl className={styles.glossary}>
+              {Object.entries(GLOSSARY).map(([term, text]) => (
+                <div key={term}>
+                  <dt>{term === "snr" ? "S/N" : term === "mjd" ? "MJD" : term === "µjy" ? "µJy" : term}</dt>
+                  <dd>{text}</dd>
+                </div>
+              ))}
+            </dl>
+          </Disclosure>
 
-      <section aria-labelledby="testing">
-        <h2 id="testing">How we test ourselves</h2>
-        <p>
-          We plant fake moving objects, of known brightness and speed, into real images and check how many the pipeline finds. We
-          also run it on patches with nothing planted to count false alarms. These planted objects are always labeled SIMULATED.{" "}
-          <Link href="/limits/">See the results</Link>
-        </p>
-      </section>
-
-      <section aria-labelledby="integrity">
-        <h2 id="integrity">Scientific integrity</h2>
-        <p>
-          We do not claim to discover Planet X. A candidate that does not match a known object could be an imaging
-          artifact, a measurement error, or an object missing from the catalog. Planet X is our scientific motivation,
-          not a promised result. Every image links back to the archive file it came from, and every number in an
-          explanation comes from our measurements.
-        </p>
-      </section>
-
-      <section aria-labelledby="ai-use">
-        <h2 id="ai-use">How we use AI</h2>
-        <p>
-          The plain-language write-ups, &ldquo;ask about this object&rdquo; and the natural-language search are written by
-          Meta&apos;s Llama 4 Scout model running on Cloudflare Workers AI. The model only sees an object&apos;s measured
-          values. Before a write-up is shown, the site checks that every number in it appears in the measurements and
-          that it never calls an object new or discovered; if a check fails, a fixed template is shown instead.
-        </p>
-        <p>
-          The same model answers the &ldquo;Ask Driftnet&rdquo; guide on every page, using only this site&apos;s published notes and
-          survey totals, with the same number check. Write-ups can be machine-translated into nine languages by Meta&apos;s m2m100
-          (a translation is shown only if every number in it matches the English) and read aloud by MeloTTS, and questions can
-          be spoken and turned into text by OpenAI&apos;s Whisper, all on Workers AI. Each feature has a daily cap and falls back to
-          plain text or the browser&apos;s own voice when it isn&apos;t available.
-        </p>
-        <p>
-          Detection, linking, orbit fits and the catalog checks are ordinary code, not AI. We also used AI coding
-          assistants (Anthropic&apos;s Claude) to help write and review the code. The team chose the methods and checked
-          the scientific results, including the validation runs on the Limits page.
-        </p>
-      </section>
-
-      <section aria-labelledby="glossary">
-        <h2 id="glossary">Glossary</h2>
-        <dl className={styles.glossary}>
-          {Object.entries(GLOSSARY).map(([term, text]) => (
-            <div key={term}>
-              <dt>{term === "snr" ? "S/N" : term === "mjd" ? "MJD" : term === "µjy" ? "µJy" : term}</dt>
-              <dd>{text}</dd>
-            </div>
-          ))}
-        </dl>
+          <Disclosure id="advisor" summary="Expert review">
+            <p>
+              We reviewed the method and the Planet X question with <strong>Dr. Tavarez-Brown</strong> (PhD, Astronomy, University of
+              Washington). Her questions about how faint SPHEREx can see are why we now state our detection limits clearly. Any remaining
+              errors are ours.
+            </p>
+          </Disclosure>
+        </DisclosureGroup>
       </section>
 
       <section aria-labelledby="team">
@@ -371,7 +334,7 @@ export default function AboutPage() {
           <li>Bodhi: NASA data research, image analysis, scientific validation, backend and AI</li>
         </ul>
         <p>
-          Built for the NASA Space Apps Challenge 2026, &ldquo;Planet X and SPHEREx&rdquo;. Everything is open source (MIT), including the pipeline, the published data and the survey runs.
+          Built for the NASA Space Apps Challenge 2026, &ldquo;Planet X and SPHEREx&rdquo;. Everything is open source (MIT).
         </p>
       </section>
     </div>
