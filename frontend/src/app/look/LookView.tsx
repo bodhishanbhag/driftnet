@@ -3,7 +3,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parseTarget, propagate, fmtDec, fmtRa } from "@/lib/look/coords";
 import { findImage } from "@/lib/look/fits";
-import { aperture, medianStack, normalize, quantile, reproject, skyToGrid, toDiff, toGray, type Grid } from "@/lib/look/frames";
+import {
+  aperture,
+  differential,
+  fillSaturated,
+  findComparisonStars,
+  haloFlux,
+  medianStack,
+  normalize,
+  quantile,
+  reproject,
+  shiftAndStack,
+  skyToGrid,
+  toDiff,
+  toGray,
+  type Grid,
+} from "@/lib/look/frames";
 import { DETECTORS, PRESETS, type Preset } from "@/lib/look/targets";
 import type { LookImage, LookImages, Resolved } from "@/lib/look/types";
 import { wcsFromHeader } from "@/lib/look/wcs";
@@ -13,8 +28,9 @@ import styles from "./Look.module.css";
 const N = 57;
 const SCALE = 6;
 const CUTOUT_DEG = 0.1;
-const MAX_FRAMES = 16;
-const CONCURRENCY = 4;
+const MAX_FRAMES = 24;
+const CONCURRENCY = 3;
+const TRIES = 3;
 /** Mid-survey date used to center the cutouts on a moving star (2025 Dec 1). */
 const MID_MJD = 61010;
 
@@ -31,6 +47,8 @@ interface Frame {
   /** Where the target should be in this frame (grid pixels). */
   at: [number, number];
   flux: number | null;
+  /** "core" for normal aperture photometry, "halo" when the core is saturated. */
+  method: "core" | "halo" | null;
 }
 
 type Status =
@@ -74,7 +92,7 @@ export function LookView() {
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [mode, setMode] = useState<"blink" | "diff">("blink");
+  const [mode, setMode] = useState<"blink" | "diff" | "stack">("blink");
   const [failed, setFailed] = useState(0);
   const abort = useRef<AbortController | null>(null);
   const canvas = useRef<HTMLCanvasElement | null>(null);
@@ -122,16 +140,23 @@ export function LookView() {
       const im = chosen[k]!;
       try {
         const url = `/api/look/cutout?src=${encodeURIComponent(im.archive_url)}&ra_deg=${cra.toFixed(6)}&dec_deg=${cdec.toFixed(6)}&size_deg=${CUTOUT_DEG}`;
-        const res = await fetch(url, { signal: ac.signal });
-        if (!res.ok) throw new Error(String(res.status));
-        const buf = await res.arrayBuffer();
+        // IRSA turns some requests away when several arrive at once: retry with a short pause.
+        let buf: ArrayBuffer | null = null;
+        for (let attempt = 0; attempt < TRIES && !buf; attempt++) {
+          if (attempt) await new Promise((r) => setTimeout(r, 800 * attempt));
+          const res = await fetch(url, { signal: ac.signal });
+          if (res.ok) buf = await res.arrayBuffer();
+        }
+        if (!buf) throw new Error("download failed");
         const img = findImage(buf);
         const wcs = img && wcsFromHeader(img.header);
         if (!img || !wcs) throw new Error("no image");
         const raw = reproject(img, wcs, grid);
         const [ra, dec] = propagate(target, im.mjd);
         const at = skyToGrid(grid, ra, dec);
-        got[k] = { image: im, raw, z: normalize(raw), at, flux: aperture(raw, N, at[0], at[1]) };
+        const core = aperture(raw, N, at[0], at[1]);
+        const halo = core === null ? haloFlux(raw, N, at[0], at[1]) : null;
+        got[k] = { image: im, raw, z: normalize(raw), at, flux: core ?? halo, method: core !== null ? "core" : halo !== null ? "halo" : null };
       } catch {
         if (ac.signal.aborted) return;
         bad++;
@@ -171,12 +196,32 @@ export function LookView() {
   const ref = useMemo(() => (frames.length >= 3 ? medianStack(frames.map((f) => f.z)) : null), [frames]);
   const top = useMemo(() => (frames.length ? Math.max(8, quantile(frames[0]!.z, 0.995)) : 30), [frames]);
 
+  // Shift-and-stack along the predicted motion (a plain deeper image for a star that barely moves).
+  const stack = useMemo(() => {
+    if (frames.length < 3) return null;
+    const mid = frames[frames.length >> 1]!.at;
+    return { ...shiftAndStack(frames, N, mid), at: mid };
+  }, [frames]);
+
+  // Brightness, corrected with comparison stars in the same images.
+  const photometry = useMemo(() => {
+    if (status.kind !== "ready" || frames.length < 3) return null;
+    const ref0 = medianStack(frames.map((f) => f.z));
+    const comps = findComparisonStars(ref0, N, frames[frames.length >> 1]!.at);
+    const method: "core" | "halo" = frames.some((f) => f.method === "halo") ? "halo" : "core";
+    const target = frames.map((f) => (f.method === method ? f.flux : null));
+    const compFlux = comps.map(([x, y]) => frames.map((f) => aperture(f.raw, N, x, y)));
+    const cal = differential(target, compFlux);
+    const pts = frames.map((f, i) => ({ t: f.image.mjd, d: cal.target[i] ?? null })).filter((p): p is { t: number; d: number } => p.d !== null);
+    return pts.length >= 3 ? { pts, floor: cal.floor, nComp: cal.nComp, method } : null;
+  }, [frames, status.kind]);
+
   // Blink.
   useEffect(() => {
-    if (!playing || frames.length < 2) return;
+    if (!playing || frames.length < 2 || mode === "stack") return;
     const id = window.setInterval(() => setIndex((i) => (i + 1) % frames.length), 700);
     return () => window.clearInterval(id);
-  }, [playing, frames.length]);
+  }, [playing, frames.length, mode]);
 
   // Draw.
   useEffect(() => {
@@ -186,7 +231,13 @@ export function LookView() {
     const off = document.createElement("canvas");
     off.width = N;
     off.height = N;
-    const px = mode === "diff" && ref ? toDiff(f.z, ref) : toGray(f.z, top);
+    const stackTop = stack ? Math.max(8, quantile(stack.z, 0.995)) : top;
+    const px =
+      mode === "stack" && stack
+        ? toGray(fillSaturated(stack.z, N, stackTop * 0.3, stackTop).data, stackTop)
+        : mode === "diff" && ref
+          ? toDiff(f.z, ref)
+          : toGray(fillSaturated(f.z, N, top * 0.3, top).data, top);
     off.getContext("2d")!.putImageData(new ImageData(px as Uint8ClampedArray<ArrayBuffer>, N, N), 0, 0);
     const ctx = c.getContext("2d")!;
     const S = c.width / N;
@@ -205,9 +256,10 @@ export function LookView() {
       ctx.stroke();
       ctx.setLineDash([]);
     }
+    const ring = mode === "stack" && stack ? stack.at : f.at;
     ctx.strokeStyle = "#7cf0c8";
     ctx.beginPath();
-    ctx.arc((f.at[0] + 0.5) * S, (f.at[1] + 0.5) * S, 3.2 * S, 0, Math.PI * 2);
+    ctx.arc((ring[0] + 0.5) * S, (ring[1] + 0.5) * S, 3.2 * S, 0, Math.PI * 2);
     ctx.stroke();
     // Scale bar: one arcminute.
     ctx.fillStyle = "rgba(255,255,255,0.85)";
@@ -215,7 +267,7 @@ export function LookView() {
     ctx.font = "11px ui-monospace, monospace";
     ctx.fillText("1′", c.width - 12 - (30 / SCALE) * S - 5, c.height - 22);
     ctx.fillText("N ↑  E ←", 10, 18);
-  }, [frames, index, mode, ref, top, target]);
+  }, [frames, index, mode, ref, top, target, stack]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,8 +295,8 @@ export function LookView() {
   };
 
   const f = frames[index % Math.max(1, frames.length)];
-  const curve = frames.filter((x) => x.flux !== null && x.flux > 0);
   const motionArcsec = frames.length >= 2 ? Math.hypot(frames.at(-1)!.at[0] - frames[0]!.at[0], frames.at(-1)!.at[1] - frames[0]!.at[1]) * SCALE : 0;
+  const saturated = useMemo(() => frames.some((x) => fillSaturated(x.z, N, top * 0.3, top).filled > 0 && x.flux === null), [frames, top]);
   const counts = useMemo(() => {
     const m = new Map<number, number>();
     for (const im of images ?? []) if (im.detector) m.set(im.detector, (m.get(im.detector) ?? 0) + 1);
@@ -332,6 +384,9 @@ export function LookView() {
                 <button type="button" aria-pressed={mode === "diff"} onClick={() => setMode("diff")} disabled={!ref}>
                   What changed
                 </button>
+                <button type="button" aria-pressed={mode === "stack"} onClick={() => setMode("stack")} disabled={!stack}>
+                  Stack
+                </button>
               </div>
             </div>
             <label className={styles.band}>
@@ -345,7 +400,17 @@ export function LookView() {
               </select>
             </label>
 
-            {f && (
+            {mode === "stack" && stack && (
+              <p className={styles.stackNote}>
+                <strong>Shift-and-stack of {frames.length} images.</strong> Each image is shifted so the target&apos;s predicted position
+                lines up, then all are averaged: anything that moves as predicted adds up while noise averages down, about{" "}
+                {Math.sqrt(frames.length).toFixed(1)}× deeper than one image. This is how searches for faint, slow objects like Planet X
+                work. Signal at the ring:{" "}
+                <strong className="mono">{stack.snr === null ? "not measurable (saturated or off the edge)" : `S/N ${stack.snr.toFixed(1)}`}</strong>
+                {stack.snr !== null && (stack.snr >= 5 ? ", a clear detection." : stack.snr >= 3 ? ", a hint, not a detection." : ", not detected.")}
+              </p>
+            )}
+            {f && mode !== "stack" && (
               <dl className={styles.meta}>
                 <div>
                   <dt>Image</dt>
@@ -382,13 +447,14 @@ export function LookView() {
                 {frames.length} of {images?.filter((i) => i.detector === detector).length ?? 0} images from this band, spread over every
                 visit{failed ? `; ${failed} couldn't be downloaded` : ""}. Each is resampled onto the same north-up grid so stars line up.
                 {motionArcsec >= 1 && ` The ring marks where the star should be on each date; it moves ${motionArcsec.toFixed(0)}″ over these images.`}{" "}
+                {saturated && " The star's core saturates SPHEREx's detector, which records no value there; it is drawn white."}{" "}
                 The wavelength changes slightly from image to image (SPHEREx sees a different color across each detector), so steady
                 stars can flicker a little.
               </p>
             )}
           </div>
 
-          {curve.length >= 3 && <LightCurve frames={curve} emphasize={target.preset?.show === "brightness"} />}
+          {photometry && <LightCurve {...photometry} emphasize={target.preset?.show === "brightness"} />}
 
           {frames.length > 1 && (
             <ol className={styles.strip} aria-label="Images in time order">
@@ -421,27 +487,46 @@ export function LookView() {
   );
 }
 
-/** Brightness of the target in each image, as magnitudes relative to its median. */
-function LightCurve({ frames, emphasize }: { frames: Frame[]; emphasize: boolean }) {
-  const pts = frames.map((f) => ({ t: f.image.mjd, m: f.flux! }));
-  const med = [...pts.map((p) => p.m)].sort((a, b) => a - b)[pts.length >> 1]!;
-  const dm = pts.map((p) => ({ t: p.t, d: -2.5 * Math.log10(p.m / med) }));
-  const t0 = Math.min(...dm.map((p) => p.t));
-  const t1 = Math.max(...dm.map((p) => p.t));
-  const lim = Math.max(0.3, ...dm.map((p) => Math.abs(p.d))) * 1.15;
+/** Brightness of the target in each image, relative to its median, corrected with comparison stars. */
+function LightCurve({
+  pts,
+  floor,
+  nComp,
+  method,
+  emphasize,
+}: {
+  pts: { t: number; d: number }[];
+  floor: number | null;
+  nComp: number;
+  method: "core" | "halo";
+  emphasize: boolean;
+}) {
+  const t0 = Math.min(...pts.map((p) => p.t));
+  const t1 = Math.max(...pts.map((p) => p.t));
+  const lim = Math.max(0.3, (floor ?? 0) * 3, ...pts.map((p) => Math.abs(p.d))) * 1.15;
   const W = 640;
   const H = 180;
   const x = (t: number) => 40 + ((t - t0) / Math.max(1, t1 - t0)) * (W - 60);
   const y = (d: number) => H / 2 + (d / lim) * (H / 2 - 18);
-  const spread = Math.max(...dm.map((p) => p.d)) - Math.min(...dm.map((p) => p.d));
+  const spread = Math.max(...pts.map((p) => p.d)) - Math.min(...pts.map((p) => p.d));
+  const verdict =
+    floor === null
+      ? "No comparison stars were bright enough here to check the calibration, so treat this as rough."
+      : spread > 5 * floor
+        ? `That is ${(spread / floor).toFixed(0)} times the scatter of the ${nComp} steady comparison stars (±${floor.toFixed(2)} mag), far more than calibration noise. Some of it can still come from each image seeing a slightly different wavelength, which matters for very red stars.`
+        : `The ${nComp} steady comparison stars scatter by ±${floor.toFixed(2)} mag, so a change this small can't be told apart from noise.`;
+  const date = (mjd: number) => fmtDate(new Date((mjd - 40587) * 864e5).toISOString());
   return (
     <figure className={`${styles.curve} ${emphasize ? styles.curveMain : ""}`}>
       <figcaption>
-        <strong>Brightness in each image.</strong> Measured in a 13″ circle on the target, against the sky around it. Range{" "}
-        {spread.toFixed(2)} magnitudes ({(10 ** (0.4 * spread)).toFixed(1)}× from faintest to brightest). Very bright stars can
-        saturate the detector, and the slightly different wavelength of each image adds some scatter.
+        <strong>Brightness in each image: </strong>
+        range {spread.toFixed(2)} magnitudes ({(10 ** (0.4 * spread)).toFixed(1)}× from faintest to brightest). {verdict}{" "}
+        {method === "halo"
+          ? "The star's core saturates the detector, so this is measured from its halo, which is rougher."
+          : "Measured in a 13″ circle, then divided by the comparison stars in the same image to cancel calibration differences."}
       </figcaption>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Brightness over time: range ${spread.toFixed(2)} magnitudes`}>
+        {floor !== null && <rect x={40} width={W - 60} y={y(-floor)} height={Math.max(1, y(floor) - y(-floor))} className={styles.band2} />}
         <line x1={40} x2={W - 20} y1={H / 2} y2={H / 2} className={styles.axis} />
         <text x={4} y={14} className={styles.tick}>
           brighter
@@ -450,12 +535,12 @@ function LightCurve({ frames, emphasize }: { frames: Frame[]; emphasize: boolean
           fainter
         </text>
         <text x={40} y={H - 4} className={styles.tick}>
-          {fmtDate(new Date((t0 - 40587) * 864e5).toISOString())}
+          {date(t0)}
         </text>
         <text x={W - 20} y={H - 4} className={styles.tick} textAnchor="end">
-          {fmtDate(new Date((t1 - 40587) * 864e5).toISOString())}
+          {date(t1)}
         </text>
-        {dm.map((p, i) => (
+        {pts.map((p, i) => (
           <circle key={i} cx={x(p.t)} cy={y(p.d)} r={4} className={styles.dot} />
         ))}
       </svg>

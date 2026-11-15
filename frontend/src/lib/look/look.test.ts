@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseTarget, propagate } from "./coords";
 import { findImage, readHdus } from "./fits";
-import { aperture, gridToSky, medianStack, skyToGrid } from "./frames";
+import { aperture, differential, gridToSky, medianStack, shiftAndStack, skyToGrid } from "./frames";
 import { pixToSky, skyToPix, wcsFromHeader } from "./wcs";
 
 function card(k: string, v: string) {
@@ -107,5 +107,42 @@ describe("coords", () => {
     const [ra, dec] = propagate({ ra_deg: 0, dec_deg: 0, pm_ra_mas_yr: 3600, pm_dec_mas_yr: -3600, epoch_year: 2000 }, 51544.5 + 365.25 * 10);
     expect(ra).toBeCloseTo(36 / 3600, 8);
     expect(dec).toBeCloseTo(-36 / 3600, 8);
+  });
+});
+
+describe("differential photometry and stacking", () => {
+  it("removes a per-frame calibration change seen in the comparison stars", () => {
+    // Frame 2 is 20% too bright overall; the target really is 2× brighter in frame 3.
+    const scale = [1, 1.2, 1, 1];
+    const target = [100, 120, 200, 100].map((v) => v);
+    const comps = [
+      scale.map((s) => 50 * s),
+      scale.map((s) => 80 * s),
+      scale.map((s) => 30 * s),
+    ];
+    const r = differential(target, comps);
+    expect(r.nComp).toBe(3);
+    expect(r.target[1]).toBeCloseTo(0, 6);
+    expect(r.target[2]).toBeCloseTo(-2.5 * Math.log10(2), 6);
+    expect(r.floor).toBeCloseTo(0, 6);
+  });
+
+  it("shift-and-stack lines up a faint mover", () => {
+    const n = 41;
+    const frames = Array.from({ length: 16 }, (_, k) => {
+      const z = new Float32Array(n * n);
+      let seed = k * 7919 + 1;
+      for (let i = 0; i < z.length; i++) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        z[i] = ((seed / 0x7fffffff) - 0.5) * 3.46; // unit-variance noise
+      }
+      const at: [number, number] = [10 + k, 20];
+      // A faint star spread over 3×3 pixels at 1σ each: invisible in any one frame.
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) z[(20 + dy) * n + 10 + k + dx]! += 1;
+      return { z, at };
+    });
+    const { snr } = shiftAndStack(frames, n, [20, 20]);
+    expect(snr).not.toBeNull();
+    expect(snr!).toBeGreaterThan(5);
   });
 });
