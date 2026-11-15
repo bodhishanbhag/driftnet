@@ -213,7 +213,33 @@ export function LookView() {
     const compFlux = comps.map(([x, y]) => frames.map((f) => aperture(f.raw, N, x, y)));
     const cal = differential(target, compFlux);
     const pts = frames.map((f, i) => ({ t: f.image.mjd, d: cal.target[i] ?? null })).filter((p): p is { t: number; d: number } => p.d !== null);
-    return pts.length >= 3 ? { pts, floor: cal.floor, nComp: cal.nComp, method } : null;
+    if (pts.length < 3) return null;
+    // Images within two days of each other form one visit. Over a visit the star barely changes,
+    // so the scatter inside visits is a second, direct measure of the noise.
+    const visits: number[][] = [];
+    for (const p of pts) {
+      const v = visits.at(-1);
+      if (v && p.t - pts[pts.indexOf(p) - 1]!.t < 2) v.push(p.d);
+      else visits.push([p.d]);
+    }
+    const sd = (xs: number[]) => {
+      const m = xs.reduce((a, b) => a + b, 0) / xs.length;
+      return Math.sqrt(xs.reduce((a, b) => a + (b - m) ** 2, 0) / (xs.length - 1));
+    };
+    const within = visits.filter((v) => v.length >= 2).map(sd).sort((a, b) => a - b);
+    const withinFloor = within.length ? within[within.length >> 1]! : null;
+    const means = visits.map((v) => v.reduce((a, b) => a + b, 0) / v.length);
+    const floors = [cal.floor, withinFloor].filter((x): x is number => x !== null);
+    return {
+      pts,
+      floor: floors.length ? Math.max(...floors) : null,
+      compFloor: cal.floor,
+      withinFloor,
+      nComp: cal.nComp,
+      nVisits: visits.length,
+      spread: means.length >= 2 ? Math.max(...means) - Math.min(...means) : 0,
+      method,
+    };
   }, [frames, status.kind]);
 
   // Blink.
@@ -492,13 +518,21 @@ export function LookView() {
 function LightCurve({
   pts,
   floor,
+  compFloor,
+  withinFloor,
   nComp,
+  nVisits,
+  spread,
   method,
   emphasize,
 }: {
   pts: { t: number; d: number }[];
   floor: number | null;
+  compFloor: number | null;
+  withinFloor: number | null;
   nComp: number;
+  nVisits: number;
+  spread: number;
   method: "core" | "halo";
   emphasize: boolean;
 }) {
@@ -509,19 +543,26 @@ function LightCurve({
   const H = 180;
   const x = (t: number) => 40 + ((t - t0) / Math.max(1, t1 - t0)) * (W - 60);
   const y = (d: number) => H / 2 + (d / lim) * (H / 2 - 18);
-  const spread = Math.max(...pts.map((p) => p.d)) - Math.min(...pts.map((p) => p.d));
+  const noise = [
+    compFloor !== null ? `${nComp} steady comparison stars scatter by ±${compFloor.toFixed(2)} mag` : null,
+    withinFloor !== null ? `images taken within the same visit scatter by ±${withinFloor.toFixed(2)} mag` : null,
+  ]
+    .filter(Boolean)
+    .join(", and ");
   const verdict =
-    floor === null
-      ? "No comparison stars were bright enough here to check the calibration, so treat this as rough."
-      : spread > 5 * floor
-        ? `That is ${(spread / floor).toFixed(0)} times the scatter of the ${nComp} steady comparison stars (±${floor.toFixed(2)} mag), far more than calibration noise. Some of it can still come from each image seeing a slightly different wavelength, which matters for very red stars.`
-        : `The ${nComp} steady comparison stars scatter by ±${floor.toFixed(2)} mag, so a change this small can't be told apart from noise.`;
+    nVisits < 2
+      ? "All images come from one visit, so this can't show a change over time."
+      : floor === null
+        ? "There is nothing to check the noise against here, so treat this as rough."
+        : spread > 5 * floor
+          ? `The visit averages differ by ${spread.toFixed(2)} magnitudes (${(10 ** (0.4 * spread)).toFixed(1)}×) while ${noise}: a real change. Part of it can still come from each image seeing a slightly different wavelength, which matters for very red stars.`
+          : `The visit averages differ by ${spread.toFixed(2)} magnitudes, but ${noise}, so this can't be told apart from noise.`;
   const date = (mjd: number) => fmtDate(new Date((mjd - 40587) * 864e5).toISOString());
   return (
     <figure className={`${styles.curve} ${emphasize ? styles.curveMain : ""}`}>
       <figcaption>
-        <strong>Brightness in each image: </strong>
-        range {spread.toFixed(2)} magnitudes ({(10 ** (0.4 * spread)).toFixed(1)}× from faintest to brightest). {verdict}{" "}
+        <strong>Brightness in each image, over {nVisits} visits. </strong>
+        {verdict}{" "}
         {method === "halo"
           ? "The star's core saturates the detector, so this is measured from its halo, which is rougher."
           : "Measured in a 13″ circle, then divided by the comparison stars in the same image to cancel calibration differences."}
