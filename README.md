@@ -162,7 +162,7 @@ We want to be clear about where AI was and was not used.
 
 **During development**
 
-- Claude (Anthropic), mainly through Claude Code, helped write and review code, documentation, the submission text and the demo slides. AI-assisted commits carry a `Co-authored-by: Claude` trailer. The team chose the methods, ran the validation and checked the results.
+- Claude (Anthropic), mainly through Claude Code, helped write and review code, documentation, the submission text and the demo slides. AI-assisted commits carry a `Co-authored-by: Claude` trailer. The team chose the methods, ran the validation and checked the results. Primary models include Opus 5.5, and Fable 5.2. 
 
 **What AI did not do**
 
