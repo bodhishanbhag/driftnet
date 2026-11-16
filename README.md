@@ -151,3 +151,21 @@ SPHEREx sees each sighting through a different part of its filters, so a moving 
 Beyond the three showcase fields, `.github/workflows/survey.yml` searches SPHEREx week segments tile by tile along the ecliptic. It runs on GitHub's machines (they read the images straight from the public `nasa-irsa-spherex` S3 bucket) in 15 parallel shards, keeps every 0.3° tile where the pipeline found a moving object that passed vetting, and commits the result to `main`. Cloudflare then redeploys, and the Worker's cron checks each new candidate against JPL. It runs weekly, on every pipeline change, and on demand (Actions → Survey → Run workflow, where you can list more segments).
 
 Tiles searched without finding anything are recorded too: `data/survey/footprint.json` keeps every tile ever searched with its latest result (with moving objects, empty, or failed and why), and `data/survey/ledger.json` keeps one row per run. `/api/survey` serves both, so the sky map shows where the survey looked and found nothing, not just its finds.
+## How we used AI
+
+We want to be clear about where AI was and was not used.
+
+**In the product**
+
+- Plain-language object summaries, "Ask Driftnet" answers and natural-language search are written by Meta's Llama 4 Scout, running on Cloudflare Workers AI. The model only sees an object's measured values. Before any AI text is shown, the site checks every number in it against the measurements and blocks wording that claims a discovery. If a check fails, a fixed template is shown instead.
+- Translations use m2m100, read-aloud audio is synthesized by MeloTTS, and voice questions are transcribed by Whisper, all on Cloudflare Workers AI. Read-aloud audio is AI-generated speech.
+
+**During development**
+
+- Claude (Anthropic), mainly through Claude Code, helped write and review code, documentation, the submission text and the demo slides. AI-assisted commits carry a `Co-authored-by: Claude` trailer. The team chose the methods, ran the validation and checked the results.
+
+**What AI did not do**
+
+- AI does not detect, link, measure or identify any object. Detection, linking, orbit fitting and catalog checks are ordinary, tested code.
+- No image or video in this project is AI-generated. Every sky image is real SPHEREx data (NASA / JPL-Caltech / IPAC). Simulated test objects are produced by our own code and are labeled SIMULATED.
+- No NASA logos or mission identifiers were created or modified with AI.
