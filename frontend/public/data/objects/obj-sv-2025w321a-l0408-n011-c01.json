@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.0be4aef",
-  "build_run_id": "gh-44818801764-1",
+  "build_run_id": "gh-44884535821-1",
   "object_id": "obj-sv-2025w321a-l0408-n011-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -2205,17 +2205,17 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.072,
-    "rank": 1858,
-    "n_ranked": 2167,
+    "score": 0.073,
+    "rank": 1884,
+    "n_ranked": 2229,
     "reason_plain": "Infrared colour (spectral slope -1.08) bluer than most objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 1.4934,
-        "median": 1.4559,
-        "z": 0.17
+        "median": 1.457,
+        "z": 0.16
       },
       {
         "name": "cross_ecliptic",
@@ -2228,22 +2228,22 @@
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 1.0745,
-        "median": 1.2871,
-        "z": -0.19
+        "median": 1.2939,
+        "z": -0.2
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.4036,
-        "median": 0.3936,
+        "median": 0.3932,
         "z": 0.12
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": -1.0784,
-        "median": -0.3792,
-        "z": -1.08
+        "median": -0.3784,
+        "z": -1.09
       }
     ],
     "method": "isolation_forest_v1",
