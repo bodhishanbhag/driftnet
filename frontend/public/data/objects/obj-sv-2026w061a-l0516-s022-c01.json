@@ -1,7 +1,7 @@
 {
   "schema_version": "1.2",
   "pipeline_version": "0.1.0+git.734fac8",
-  "build_run_id": "gh-45714796509-1",
+  "build_run_id": "gh-45794022608-1",
   "object_id": "obj-sv-2026w061a-l0516-s022-c01",
   "classification": "unmatched",
   "label_plain": "Unexplained",
@@ -1064,45 +1064,45 @@
     "definition": "Rule-based ranking score in [0, 1]: motion_consistency x snr x (1 - artifact_likelihood). It orders candidates for review. It is not a probability."
   },
   "anomaly": {
-    "score": 0.685,
-    "rank": 81,
-    "n_ranked": 3069,
+    "score": 0.669,
+    "rank": 88,
+    "n_ranked": 3159,
     "reason_plain": "Moving at 42° to the ecliptic, steeper than most objects we have tracked",
     "features": [
       {
         "name": "log_rate",
         "label": "motion rate",
         "value": 1.7456,
-        "median": 1.4561,
+        "median": 1.4539,
         "z": 1.31
       },
       {
         "name": "cross_ecliptic",
         "label": "motion across the ecliptic",
         "value": 0.6716,
-        "median": 0.1335,
-        "z": 3.96
+        "median": 0.1352,
+        "z": 3.89
       },
       {
         "name": "abs_ecl_lat",
         "label": "distance from the ecliptic",
         "value": 2.2268,
-        "median": 1.3705,
-        "z": 0.74
+        "median": 1.3941,
+        "z": 0.71
       },
       {
         "name": "log_helio_au",
         "label": "distance from the Sun",
         "value": 0.2577,
-        "median": 0.3941,
+        "median": 0.3945,
         "z": -1.52
       },
       {
         "name": "colour",
         "label": "infrared colour (0.75-2.5 µm)",
         "value": -1.9871,
-        "median": -0.3584,
-        "z": -2.56
+        "median": -0.3565,
+        "z": -2.57
       }
     ],
     "method": "isolation_forest_v1",
